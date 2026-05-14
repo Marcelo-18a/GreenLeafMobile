@@ -45,7 +45,7 @@ export default function LoginScreen() {
                     <Text style={[styles.loginButtonText, compact && styles.loginButtonTextCompact]}>Login</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity activeOpacity={0.75}>
+                <TouchableOpacity activeOpacity={0.75} onPress={() => router.push('/cadastro')}>
                     <Text style={[styles.signUpLink, compact && styles.signUpLinkCompact]}>Nao tenho Conta!</Text>
                 </TouchableOpacity>
             </ScrollView>

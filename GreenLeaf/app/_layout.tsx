@@ -52,6 +52,10 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="cadastro" options={{ headerShown: false }} />
+        <Stack.Screen name="duvidas" options={{ headerShown: false }} />
+        <Stack.Screen name="historico" options={{ headerShown: false }} />
+        <Stack.Screen name="mapacalor" options={{ headerShown: false }} />
         <Stack.Screen name="principal" options={{ headerShown: false }} />
         <Stack.Screen name="galeria" options={{ headerShown: false }} />
         <Stack.Screen name="telaconfig" options={{ headerShown: false }} />

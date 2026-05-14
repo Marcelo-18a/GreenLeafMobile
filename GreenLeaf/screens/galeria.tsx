@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsiveLayout } from './useResponsiveLayout';
 
@@ -33,6 +34,7 @@ function GalleryTile({ uri }: GalleryItem) {
 
 export default function GaleriaScreen() {
     const { compact } = useResponsiveLayout();
+    const insets = useSafeAreaInsets();
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -50,22 +52,30 @@ export default function GaleriaScreen() {
                 </View>
             </ScrollView>
 
-            <View style={styles.bottomBar}>
+            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8, height: 82 + insets.bottom }]}>
                 <TouchableOpacity style={styles.navItem} activeOpacity={0.75} onPress={() => router.replace('/principal')}>
-                    <Ionicons name="home" size={32} color="#5bbb48" />
+                    <View style={styles.iconWrap}>
+                        <Ionicons name="home" size={36} color="#5bbb48" />
+                    </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.navItem} activeOpacity={0.75}>
-                    <Ionicons name="archive" size={28} color="#5bbb48" />
+                    <View style={styles.iconWrap}>
+                        <Ionicons name="archive" size={32} color="#5bbb48" />
+                    </View>
                     <View style={styles.activeDot} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.navItem} activeOpacity={0.75} onPress={() => router.push('/telasuporte')}>
-                    <MaterialCommunityIcons name="headset" size={28} color="#5bbb48" />
+                    <View style={styles.iconWrap}>
+                        <MaterialCommunityIcons name="headset" size={32} color="#5bbb48" />
+                    </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.navItem} activeOpacity={0.75} onPress={() => router.push('/telaconfig')}>
-                    <Ionicons name="settings" size={28} color="#5bbb48" />
+                    <View style={styles.iconWrap}>
+                        <Ionicons name="settings" size={32} color="#5bbb48" />
+                    </View>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -144,13 +154,13 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     bottomBar: {
-        height: 82,
         borderTopWidth: 1,
         borderTopColor: '#b8b8b8',
         backgroundColor: '#ededed',
         flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
+        paddingTop: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -3 },
         shadowOpacity: 0.16,
@@ -161,12 +171,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         minWidth: 54,
+        position: 'relative',
+    },
+    iconWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        backgroundColor: 'transparent',
+        marginBottom: 8,
     },
     activeDot: {
+        position: 'absolute',
+        bottom: 8,
+        left: '50%',
+        marginLeft: -3,
         width: 6,
         height: 6,
         borderRadius: 3,
         backgroundColor: '#5bbb48',
-        marginTop: -5,
     },
 });
