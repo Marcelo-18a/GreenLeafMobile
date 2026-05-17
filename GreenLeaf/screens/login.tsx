@@ -1,10 +1,53 @@
 import { router } from 'expo-router';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { API_BASE_URL } from '../constants/api';
 import { useResponsiveLayout } from './useResponsiveLayout';
 
 export default function LoginScreen() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
     const { compact } = useResponsiveLayout();
+
+    const handleLogin = async () => {
+        if (!email || !password) {
+            Alert.alert('Atenção', 'Preencha email e senha.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/users/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (response.status === 404) {
+                Alert.alert('Conta não encontrada', 'Você ainda não tem cadastro. Vamos criar agora.');
+                router.push({ pathname: '/cadastro', params: { email } });
+                return;
+            }
+
+            if (!response.ok) {
+                Alert.alert('Erro', data?.message || 'Não foi possível entrar.');
+                return;
+            }
+
+            router.replace('/principal');
+        } catch (error) {
+            Alert.alert('Erro', 'Falha na conexão com o servidor.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -23,6 +66,8 @@ export default function LoginScreen() {
                     placeholder="Email"
                     placeholderTextColor="#4f4f4f"
                     style={[styles.input, compact && styles.inputCompact]}
+                    value={email}
+                    onChangeText={setEmail}
                     autoCapitalize="none"
                     keyboardType="email-address"
                 />
@@ -31,6 +76,8 @@ export default function LoginScreen() {
                     placeholder="Senha"
                     placeholderTextColor="#4f4f4f"
                     style={[styles.input, compact && styles.inputCompact]}
+                    value={password}
+                    onChangeText={setPassword}
                     secureTextEntry
                 />
 
@@ -41,8 +88,9 @@ export default function LoginScreen() {
                 <TouchableOpacity
                     style={[styles.loginButton, compact && styles.loginButtonCompact]}
                     activeOpacity={0.85}
-                    onPress={() => router.replace('/principal')}>
-                    <Text style={[styles.loginButtonText, compact && styles.loginButtonTextCompact]}>Login</Text>
+                    onPress={handleLogin}
+                    disabled={loading}>
+                    <Text style={[styles.loginButtonText, compact && styles.loginButtonTextCompact]}>{loading ? 'Entrando...' : 'Login'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity activeOpacity={0.75} onPress={() => router.push('/cadastro')}>
