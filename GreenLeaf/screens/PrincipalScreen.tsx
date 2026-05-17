@@ -1,10 +1,14 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useState, type ReactNode } from 'react';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsiveLayout } from './useResponsiveLayout';
+
+const PROFILE_STORAGE_KEY = 'greenleaf_profile';
 
 function ActionCard({ icon, text, onPress }: { icon: ReactNode; text: string; onPress?: () => void }) {
     return (
@@ -23,6 +27,33 @@ function ActionCard({ icon, text, onPress }: { icon: ReactNode; text: string; on
 export default function PrincipalScreen() {
     const { compact } = useResponsiveLayout();
     const insets = useSafeAreaInsets();
+    const [profileName, setProfileName] = useState('Usuário');
+    const [profilePhotoUri, setProfilePhotoUri] = useState('');
+
+    useFocusEffect(
+        useCallback(() => {
+            const loadProfile = async () => {
+                try {
+                    const saved = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
+
+                    if (!saved) {
+                        setProfileName('Usuário');
+                        setProfilePhotoUri('');
+                        return;
+                    }
+
+                    const profile = JSON.parse(saved) as { name?: string; photoUri?: string };
+                    setProfileName(profile.name?.trim() || 'Usuário');
+                    setProfilePhotoUri(profile.photoUri || '');
+                } catch (error) {
+                    setProfileName('Usuário');
+                    setProfilePhotoUri('');
+                }
+            };
+
+            loadProfile();
+        }, [])
+    );
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -36,11 +67,22 @@ export default function PrincipalScreen() {
 
             <ScrollView contentContainerStyle={[styles.content, compact && styles.contentCompact]} showsVerticalScrollIndicator={false}>
                 <View style={styles.userRow}>
-                    <TouchableOpacity activeOpacity={0.8} style={[styles.avatarCircle, compact && styles.avatarCircleCompact]}>
-                        <FontAwesome5 name="user" size={compact ? 18 : 26} color="#ffffff" solid />
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={[styles.avatarCircle, compact && styles.avatarCircleCompact]}
+                        onPress={() => router.push('/perfil')}>
+                        {profilePhotoUri ? (
+                            <Image source={{ uri: profilePhotoUri }} style={styles.avatarImage} />
+                        ) : (
+                            <FontAwesome5 name="user" size={compact ? 18 : 26} color="#ffffff" solid />
+                        )}
                     </TouchableOpacity>
 
-                    <Text style={[styles.userName, compact && styles.userNameCompact]}>Usuario</Text>
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => router.push('/perfil')} style={styles.nameTouchArea}>
+                        <Text style={[styles.userName, compact && styles.userNameCompact]} numberOfLines={1} ellipsizeMode="tail">
+                            {profileName}
+                        </Text>
+                    </TouchableOpacity>
 
                     <View style={[styles.headerActions, compact && styles.headerActionsCompact]}>
                         <TouchableOpacity activeOpacity={0.8} style={[styles.smallIconCircle, compact && styles.smallIconCircleCompact]}>
@@ -55,18 +97,18 @@ export default function PrincipalScreen() {
                 </View>
 
                 <TouchableOpacity activeOpacity={0.8} onPress={() => router.push('/duvidas')}>
-                    <Text style={[styles.faqLink, compact && styles.faqLinkCompact]}>Duvidas frequentes</Text>
+                    <Text style={[styles.faqLink, compact && styles.faqLinkCompact]}>Dúvidas frequentes</Text>
                 </TouchableOpacity>
 
                 <View style={[styles.cardsArea, compact && styles.cardsAreaCompact]}>
                     <ActionCard
                         icon={<Ionicons name="camera" size={compact ? 18 : 24} color="#4f4f4f" />}
-                        text="Tire uma foto para inteligencia artificial"
+                        text="Tire uma foto para inteligência artificial"
                     />
 
                     <ActionCard
                         icon={<Ionicons name="time-outline" size={compact ? 19 : 25} color="#4f4f4f" />}
-                        text="Acessar Historico das fotos retiradas anteriormente"
+                        text="Acessar histórico das fotos tiradas anteriormente"
                         onPress={() => router.push('/historico')}
                     />
 
@@ -114,36 +156,38 @@ const styles = StyleSheet.create({
         backgroundColor: '#dcdcdc',
     },
     header: {
-        height: 108,
+        height: 120,
         backgroundColor: '#57b947',
-        borderBottomRightRadius: 28,
+        borderBottomRightRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.22,
+        shadowOpacity: 0.2,
         shadowRadius: 2,
-        elevation: 5,
+        elevation: 4,
     },
     logo: {
-        width: 188,
-        height: 66,
+        width: 172,
+        height: 56,
+        marginTop: 12,
     },
     headerCompact: {
-        height: 92,
+        height: 82,
     },
     logoCompact: {
-        width: 170,
-        height: 58,
+        width: 160,
+        height: 52,
+        marginTop: 12,
     },
     content: {
         flexGrow: 1,
-        paddingTop: 10,
-        paddingBottom: 14,
+        paddingTop: 24,
+        paddingBottom: 20,
     },
     contentCompact: {
-        paddingTop: 8,
-        paddingBottom: 10,
+        paddingTop: 16,
+        paddingBottom: 16,
     },
     userRow: {
         flexDirection: 'row',
@@ -162,11 +206,20 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.28,
         shadowRadius: 2,
         elevation: 5,
+        overflow: 'hidden',
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
     },
     avatarCircleCompact: {
         width: 62,
         height: 62,
         borderRadius: 31,
+    },
+    nameTouchArea: {
+        flex: 1,
+        minWidth: 0,
     },
     userName: {
         marginLeft: 10,
@@ -179,7 +232,7 @@ const styles = StyleSheet.create({
         marginLeft: 8,
     },
     headerActions: {
-        marginLeft: 'auto',
+        marginLeft: 8,
         flexDirection: 'row',
         gap: 12,
     },
