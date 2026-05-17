@@ -54,7 +54,7 @@ export default function TelaSuporteScreen() {
                 </TouchableOpacity>
             </ScrollView>
 
-            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8, height: 82 + insets.bottom }]}> 
+            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8, height: 82 + insets.bottom }]}>
                 <TouchableOpacity style={styles.navItem} activeOpacity={0.75} onPress={() => router.replace('/principal')}>
                     <View style={styles.iconWrap}>
                         <Ionicons name="home" size={36} color="#5bbb48" />
