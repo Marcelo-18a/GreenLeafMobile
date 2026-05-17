@@ -13,7 +13,7 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Atenção', 'Preencha email e senha.');
+            Alert.alert('Atenção', 'Preencha e-mail e senha.');
             return;
         }
 
@@ -63,7 +63,7 @@ export default function LoginScreen() {
                 <Text style={[styles.title, compact && styles.titleCompact]}>Login</Text>
 
                 <TextInput
-                    placeholder="Email"
+                    placeholder="E-mail"
                     placeholderTextColor="#4f4f4f"
                     style={[styles.input, compact && styles.inputCompact]}
                     value={email}
@@ -94,7 +94,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity activeOpacity={0.75} onPress={() => router.push('/cadastro')}>
-                    <Text style={[styles.signUpLink, compact && styles.signUpLinkCompact]}>Nao tenho Conta!</Text>
+                    <Text style={[styles.signUpLink, compact && styles.signUpLinkCompact]}>Não tenho conta!</Text>
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
@@ -119,10 +119,12 @@ const styles = StyleSheet.create({
     logo: {
         width: 190,
         height: 96,
+        marginTop: 12,
     },
     logoCompact: {
         width: 168,
         height: 84,
+        marginTop: 12,
     },
     bottomArea: {
         flexGrow: 1,

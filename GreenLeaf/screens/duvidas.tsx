@@ -55,7 +55,7 @@ export default function DuvidasScreen() {
 const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: '#f4f4f4' },
     header: {
-        height: 92,
+        height: 120,
         backgroundColor: '#57b947',
         borderBottomRightRadius: 30,
         justifyContent: 'center',
@@ -66,8 +66,8 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 4,
     },
-    logo: { width: 170, height: 56 },
-    content: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 20 },
+    logo: { width: 172, height: 56, marginTop: 12 },
+    content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 },
     backRow: { alignSelf: 'flex-start', paddingVertical: 6 },
     backText: { fontSize: 16, color: '#4d4d4d', fontWeight: '600' },
     title: { textAlign: 'center', fontSize: 24, fontWeight: '700', color: '#4a4a4a', marginBottom: 16 },

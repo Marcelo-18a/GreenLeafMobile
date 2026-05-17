@@ -57,6 +57,7 @@ function RootLayoutNav() {
         <Stack.Screen name="historico" options={{ headerShown: false }} />
         <Stack.Screen name="mapacalor" options={{ headerShown: false }} />
         <Stack.Screen name="principal" options={{ headerShown: false }} />
+        <Stack.Screen name="perfil" options={{ headerShown: false }} />
         <Stack.Screen name="galeria" options={{ headerShown: false }} />
         <Stack.Screen name="telaconfig" options={{ headerShown: false }} />
         <Stack.Screen name="telasuporte" options={{ headerShown: false }} />

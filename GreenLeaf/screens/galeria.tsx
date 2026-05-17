@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#dcdcdc',
     },
     header: {
-        height: 90,
+        height: 120,
         backgroundColor: '#57b947',
         borderBottomRightRadius: 30,
         justifyContent: 'center',
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
     logo: {
         width: 172,
         height: 56,
+        marginTop: 12,
     },
     headerCompact: {
         height: 82,
@@ -109,16 +110,18 @@ const styles = StyleSheet.create({
     logoCompact: {
         width: 160,
         height: 52,
+        marginTop: 12,
     },
     content: {
         flexGrow: 1,
-        paddingTop: 22,
-        paddingHorizontal: 18,
-        paddingBottom: 18,
+        paddingTop: 24,
+        paddingHorizontal: 24,
+        paddingBottom: 20,
     },
     contentCompact: {
         paddingTop: 16,
-        paddingHorizontal: 14,
+        paddingHorizontal: 18,
+        paddingBottom: 16,
     },
     title: {
         textAlign: 'center',

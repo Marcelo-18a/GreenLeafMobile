@@ -70,7 +70,7 @@ export default function CadastroScreen() {
                     onChangeText={setName}
                 />
                 <TextInput
-                    placeholder="Email"
+                    placeholder="E-mail"
                     placeholderTextColor="#4f4f4f"
                     style={[styles.input, compact && styles.inputCompact]}
                     value={email}
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#58b947',
     },
     header: {
-        height: '28%',
+        height: 120,
         alignItems: 'center',
         justifyContent: 'center',
         paddingTop: 18,
@@ -125,10 +125,12 @@ const styles = StyleSheet.create({
     logo: {
         width: 198,
         height: 96,
+        marginTop: 12,
     },
     logoCompact: {
         width: 172,
         height: 84,
+        marginTop: 12,
     },
     card: {
         flexGrow: 1,

@@ -5,12 +5,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsiveLayout } from './useResponsiveLayout';
 
-function ConfigRow({ iconName }: { iconName: React.ComponentProps<typeof Ionicons>['name'] }) {
+type ConfigRowProps = {
+    iconName: React.ComponentProps<typeof Ionicons>['name'];
+    label: string;
+    onPress?: () => void;
+};
+
+function ConfigRow({ iconName, label, onPress }: ConfigRowProps) {
     return (
-        <TouchableOpacity style={styles.row} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.row} activeOpacity={0.85} onPress={onPress}>
             <View style={styles.rowLeft}>
                 <Ionicons name={iconName} size={28} color="#4f4f4f" />
-                <Text style={styles.rowLabel}>Conta</Text>
+                <Text style={styles.rowLabel}>{label}</Text>
             </View>
             <Ionicons name="chevron-forward" size={22} color="#4f4f4f" />
         </TouchableOpacity>
@@ -28,19 +34,19 @@ export default function TelaConfigScreen() {
             </View>
 
             <ScrollView contentContainerStyle={[styles.content, compact && styles.contentCompact]} showsVerticalScrollIndicator={false}>
-                <Text style={[styles.title, compact && styles.titleCompact]}>Configuracoes</Text>
+                <Text style={[styles.title, compact && styles.titleCompact]}>Configurações</Text>
 
                 <View style={[styles.rows, compact && styles.rowsCompact]}>
-                    <ConfigRow iconName="person" />
-                    <ConfigRow iconName="notifications" />
-                    <ConfigRow iconName="eye" />
-                    <ConfigRow iconName="lock-closed" />
-                    <ConfigRow iconName="headset" />
-                    <ConfigRow iconName="help-circle" />
+                    <ConfigRow iconName="person" label="Perfil" onPress={() => router.push('/perfil')} />
+                    <ConfigRow iconName="notifications" label="Notificações" />
+                    <ConfigRow iconName="eye" label="Acessibilidade" />
+                    <ConfigRow iconName="lock-closed" label="Privacidade" />
+                    <ConfigRow iconName="headset" label="Suporte" onPress={() => router.push('/telasuporte')} />
+                    <ConfigRow iconName="help-circle" label="Dúvidas" onPress={() => router.push('/duvidas')} />
                 </View>
             </ScrollView>
 
-            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8, height: 82 + insets.bottom }]}> 
+            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 8, height: 82 + insets.bottom }]}>
                 <TouchableOpacity style={styles.navItem} activeOpacity={0.75} onPress={() => router.replace('/principal')}>
                     <View style={styles.iconWrap}>
                         <Ionicons name="home" size={36} color="#5bbb48" />
@@ -76,11 +82,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#dcdcdc',
     },
     header: {
-        height: 90,
+        height: 120,
         backgroundColor: '#57b947',
         borderBottomRightRadius: 30,
-        borderBottomColor: '#0a86ff',
-        borderBottomWidth: 2,
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
@@ -92,6 +96,7 @@ const styles = StyleSheet.create({
     logo: {
         width: 172,
         height: 56,
+        marginTop: 12,
     },
     headerCompact: {
         height: 82,
@@ -99,6 +104,7 @@ const styles = StyleSheet.create({
     logoCompact: {
         width: 160,
         height: 52,
+        marginTop: 12,
     },
     content: {
         flexGrow: 1,
