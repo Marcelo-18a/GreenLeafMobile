@@ -7,6 +7,7 @@ import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, Vi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResponsiveLayout } from './useResponsiveLayout';
+import { API_BASE_URL } from '../constants/api';
 
 const PROFILE_STORAGE_KEY = 'greenleaf_profile';
 
@@ -29,11 +30,37 @@ export default function PrincipalScreen() {
     const insets = useSafeAreaInsets();
     const [profileName, setProfileName] = useState('Usuário');
     const [profilePhotoUri, setProfilePhotoUri] = useState('');
+    const handleLogout = async () => {
+        try {
+            await AsyncStorage.removeItem('greenleaf_token');
+            await AsyncStorage.removeItem('greenleaf_profile');
+        } catch (e) {
+            // ignore
+        }
+        // cast para contornar checagem de tipos do expo-router nesta chamada
+        (router as any).replace('/login');
+    };
+
+    const logoutTop = insets.top + (compact ? 8 : 12);
 
     useFocusEffect(
         useCallback(() => {
             const loadProfile = async () => {
                 try {
+                    const token = await AsyncStorage.getItem('greenleaf_token');
+                    if (token) {
+                        const resp = await fetch(`${API_BASE_URL}/api/users/me`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        if (resp.ok) {
+                            const server = await resp.json();
+                            setProfileName(server.name?.trim() || 'Usuário');
+                            setProfilePhotoUri(server.photoUri || '');
+                            await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ name: server.name || '', photoUri: server.photoUri || '' }));
+                            return;
+                        }
+                    }
+
                     const saved = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
 
                     if (!saved) {
@@ -58,6 +85,17 @@ export default function PrincipalScreen() {
     return (
         <SafeAreaView style={styles.screen}>
             <View style={[styles.header, compact && styles.headerCompact]}>
+                <TouchableOpacity
+                    onPress={handleLogout}
+                    activeOpacity={0.85}
+                    style={[
+                        styles.topLeftLogout,
+                        compact && styles.topLeftLogoutCompact,
+                        { top: logoutTop },
+                    ]}>
+                    <Ionicons name="log-out-outline" size={compact ? 18 : 22} color="#ffffff" />
+                </TouchableOpacity>
+
                 <Image
                     source={require('../assets/images/greenleaf.png')}
                     style={[styles.logo, compact && styles.logoCompact]}
@@ -93,6 +131,8 @@ export default function PrincipalScreen() {
                         <TouchableOpacity activeOpacity={0.8} style={[styles.smallIconCircle, compact && styles.smallIconCircleCompact]}>
                             <Ionicons name="search" size={compact ? 14 : 20} color="#ffffff" />
                         </TouchableOpacity>
+
+                    
                     </View>
                 </View>
 
@@ -216,6 +256,22 @@ const styles = StyleSheet.create({
         width: 62,
         height: 62,
         borderRadius: 31,
+    },
+    topLeftLogout: {
+        position: 'absolute',
+        left: 12,
+        zIndex: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
+    },
+    topLeftLogoutCompact: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
     },
     nameTouchArea: {
         flex: 1,
