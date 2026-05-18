@@ -132,7 +132,7 @@ export default function PrincipalScreen() {
                             <Ionicons name="search" size={compact ? 14 : 20} color="#ffffff" />
                         </TouchableOpacity>
 
-                    
+
                     </View>
                 </View>
 
