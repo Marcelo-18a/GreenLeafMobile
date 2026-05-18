@@ -4,6 +4,7 @@ import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, To
 
 import { API_BASE_URL } from '../constants/api';
 import { useResponsiveLayout } from './useResponsiveLayout';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -39,6 +40,15 @@ export default function LoginScreen() {
             if (!response.ok) {
                 Alert.alert('Erro', data?.message || 'Não foi possível entrar.');
                 return;
+            }
+
+            // response includes token and user
+            const { token, user } = data;
+            if (token) {
+                await AsyncStorage.setItem('greenleaf_token', token);
+            }
+            if (user) {
+                await AsyncStorage.setItem('greenleaf_profile', JSON.stringify({ name: user.name || '', photoUri: user.photoUri || '' }));
             }
 
             router.replace('/principal');

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { useResponsiveLayout } from './useResponsiveLayout';
+import { API_BASE_URL } from '../constants/api';
 
 const PROFILE_STORAGE_KEY = 'greenleaf_profile';
 
@@ -24,12 +25,21 @@ export default function PerfilScreen() {
     useEffect(() => {
         const loadProfile = async () => {
             try {
-                const saved = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
-
-                if (!saved) {
-                    return;
+                const token = await AsyncStorage.getItem('greenleaf_token');
+                if (token) {
+                    const resp = await fetch(`${API_BASE_URL}/api/users/me`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (resp.ok) {
+                        const server = await resp.json();
+                        setName(server.name || '');
+                        setPhotoUri(server.photoUri || '');
+                        return;
+                    }
                 }
 
+                const saved = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
+                if (!saved) return;
                 const profile = JSON.parse(saved) as StoredProfile;
                 setName(profile.name || '');
                 setPhotoUri(profile.photoUri || '');
@@ -78,6 +88,21 @@ export default function PerfilScreen() {
                 name: name.trim(),
                 photoUri,
             };
+
+            const token = await AsyncStorage.getItem('greenleaf_token');
+            if (token) {
+                const resp = await fetch(`${API_BASE_URL}/api/users/me`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(profileData),
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    Alert.alert('Erro', err.message || 'Não foi possível salvar o perfil no servidor.');
+                    return;
+                }
+            }
 
             await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profileData));
             Alert.alert('Sucesso', 'Perfil atualizado com sucesso.');
