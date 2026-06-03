@@ -62,6 +62,7 @@ export default function LoginScreen() {
     return (
         <SafeAreaView style={styles.screen}>
             <View style={[styles.topArea, compact && styles.topAreaCompact]}>
+                {/* CAMINHO DA LOGO AJUSTADO PARA A PASTA IMAGES CORRETAMENTE */}
                 <Image
                     source={require('../assets/images/greenleaf.png')}
                     style={[styles.logo, compact && styles.logoCompact]}
