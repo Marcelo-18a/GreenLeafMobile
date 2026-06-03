@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const DiagnosticoSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     photoUri: { type: String, required: true },
     statusText: { type: String, required: true },
     probabilidade: { type: Number, required: true },

@@ -3,10 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dim
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
-
-// URL oficial do seu backend no Render
 const API_URL = 'https://greenleafmobile.onrender.com/api/diagnosticos'; 
 
 export default function CameraScreen() {
@@ -54,7 +53,6 @@ export default function CameraScreen() {
                 setPhoto(capturedUri);
                 setIsScanning(true);
 
-                // Define aleatoriamente o resultado (Xanthomonas phaseoli pv. manihotis)
                 const deBacteriose = Math.random() > 0.5;
                 const resultadoSimulado = {
                     photoUri: capturedUri,
@@ -66,18 +64,22 @@ export default function CameraScreen() {
                         : 'A análise da estrutura foliar não indicou anomalias fitossanitárias.'
                 };
 
-                // ENVIA OS DADOS PARA O RENDER
+                // ENVIA PARA O BACKEND ENVIANDO O TOKEN DE AUTENTICAÇÃO
                 try {
+                    const token = await AsyncStorage.getItem('token'); // Altere para a chave que você salvou no login
+                    
                     await fetch(API_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}` // Passa o token no cabeçalho para o authMiddleware
+                        },
                         body: JSON.stringify(resultadoSimulado)
                     });
                 } catch (err) {
                     console.log("Erro ao salvar no banco online:", err);
                 }
 
-                // Aguarda 5 segundos de animação
                 setTimeout(() => {
                     setIsScanning(false);
                     setPhoto(null);
