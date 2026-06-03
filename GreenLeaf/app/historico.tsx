@@ -23,18 +23,18 @@ export default function HistoricoScreen() {
     const carregarHistorico = async () => {
         try {
             setLoading(true);
-            const token = await AsyncStorage.getItem('token'); // Busca o token da conta logada
+            const token = await AsyncStorage.getItem('token'); 
             
             const response = await fetch(API_URL, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}` // Passa o token para o backend trazer apenas os dados dessa conta
+                    'Authorization': `Bearer ${token}`
                 }
             });
             const dados = await response.json();
             setHistorico(Array.isArray(dados) ? dados : []);
         } catch (error) {
-            console.log("Erro ao buscar histórico por conta:", error);
+            console.log("Erro ao buscar histórico:", error);
         } finally {
             setLoading(false);
         }
@@ -99,7 +99,7 @@ export default function HistoricoScreen() {
             ) : historico.length === 0 ? (
                 <View style={styles.center}>
                     <Ionicons name="images-outline" size={60} color="#999" />
-                    <Text style={styles.emptyText}>Você não possui nenhuma análise registrada nesta conta.</Text>
+                    <Text style={styles.emptyText}>Nenhuma análise registrada nesta conta.</Text>
                 </View>
             ) : (
                 <FlatList

@@ -64,20 +64,22 @@ export default function CameraScreen() {
                         : 'A análise da estrutura foliar não indicou anomalias fitossanitárias.'
                 };
 
-                // ENVIA PARA O BACKEND ENVIANDO O TOKEN DE AUTENTICAÇÃO
                 try {
-                    const token = await AsyncStorage.getItem('token'); // Altere para a chave que você salvou no login
+                    const token = await AsyncStorage.getItem('token'); 
                     
-                    await fetch(API_URL, {
+                    const response = await fetch(API_URL, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}` // Passa o token no cabeçalho para o authMiddleware
+                            'Authorization': `Bearer ${token}`
                         },
                         body: JSON.stringify(resultadoSimulado)
                     });
+
+                    const resData = await response.json();
+                    console.log("Status do envio:", response.status, resData);
                 } catch (err) {
-                    console.log("Erro ao salvar no banco online:", err);
+                    console.log("Erro de rede com o Render:", err);
                 }
 
                 setTimeout(() => {
@@ -97,7 +99,7 @@ export default function CameraScreen() {
                 }, 5000);
 
             } catch (error) {
-                console.log("Erro ao tirar foto:", error);
+                console.log("Erro ao capturar foto:", error);
                 setIsScanning(false);
             }
         }
