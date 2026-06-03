@@ -65,7 +65,9 @@ export default function CameraScreen() {
                 };
 
                 try {
-                    const token = await AsyncStorage.getItem('token'); 
+                    // CORREÇÃO: Buscando o token usando a chave correta configurada no seu Login
+                    const token = await AsyncStorage.getItem('greenleaf_token'); 
+                    console.log("Câmera - Token resgatado:", token ? "Token presente" : "Token ausente");
                     
                     const response = await fetch(API_URL, {
                         method: 'POST',
@@ -77,9 +79,9 @@ export default function CameraScreen() {
                     });
 
                     const resData = await response.json();
-                    console.log("Status do envio:", response.status, resData);
+                    console.log("Câmera - Status do envio:", response.status, resData);
                 } catch (err) {
-                    console.log("Erro de rede com o Render:", err);
+                    console.log("Câmera - Erro de rede com o Render:", err);
                 }
 
                 setTimeout(() => {

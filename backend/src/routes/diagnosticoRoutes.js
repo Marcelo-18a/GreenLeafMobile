@@ -3,12 +3,12 @@ const router = express.Router();
 const Diagnostico = require('../models/Diagnostico'); 
 const authMiddleware = require('../middlewares/authMiddleware'); 
 
-// ROTA POST: Salva o diagnóstico amarrado ao req.userId do seu middleware
+// ROTA POST: Salva um novo diagnóstico atrelando ao ID do usuário autenticado
 router.post('/', authMiddleware, async (req, res) => {
     try {
         const dadosDiagnostico = { 
             ...req.body, 
-            user: req.userId // Ajustado para bater com seu authMiddleware (req.userId)
+            user: req.userId // Vincula o documento ao ID extraído do token pelo authMiddleware
         };
 
         const novoDiagnostico = new Diagnostico(dadosDiagnostico);
@@ -20,7 +20,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
-// ROTA GET: Busca apenas as análises correspondentes ao req.userId logado
+// ROTA GET: Busca o histórico filtrando apenas os registros pertencentes ao usuário logado
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const historico = await Diagnostico.find({ user: req.userId }).sort({ createdAt: -1 });
