@@ -3,12 +3,12 @@ const router = express.Router();
 const Diagnostico = require('../models/Diagnostico'); 
 const authMiddleware = require('../middlewares/authMiddleware'); 
 
-// ROTA POST: Salva um novo diagnóstico atrelando ao ID do usuário autenticado
+// ROTA POST: Salva o diagnóstico incluindo coordenadas geográficas
 router.post('/', authMiddleware, async (req, res) => {
     try {
         const dadosDiagnostico = { 
             ...req.body, 
-            user: req.userId // Vincula o documento ao ID extraído do token pelo authMiddleware
+            user: req.userId 
         };
 
         const novoDiagnostico = new Diagnostico(dadosDiagnostico);
@@ -20,7 +20,7 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
-// ROTA GET: Busca o histórico filtrando apenas os registros pertencentes ao usuário logado
+// ROTA GET: Busca o histórico completo com coordenadas geográficas
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const historico = await Diagnostico.find({ user: req.userId }).sort({ createdAt: -1 });

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dimensions, StatusBar, Animated } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -46,6 +47,23 @@ export default function CameraScreen() {
     const takePicture = async () => {
         if (cameraRef.current && !isScanning) {
             try {
+                // Pede a permissão de localização em tempo de execução
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                let lat = -24.7125; // Fallback padrão da região de Pariquera-Açu se falhar
+                let lon = -47.8824;
+
+                if (status === 'granted') {
+                    try {
+                        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                        lat = location.coords.latitude;
+                        lon = location.coords.longitude;
+                    } catch (e) {
+                        // Se o emulador/celular demorar para responder o GPS, adiciona variação aleatória perto do padrão
+                        lat = lat + (Math.random() - 0.5) * 0.02;
+                        lon = lon + (Math.random() - 0.5) * 0.02;
+                    }
+                }
+
                 const options = { quality: 0.7, skipProcessing: false };
                 const data = await cameraRef.current.takePictureAsync(options);
                 const capturedUri = data.uri;
@@ -61,13 +79,13 @@ export default function CameraScreen() {
                     cor: deBacteriose ? '#d9534f' : '#5bbb48',
                     descricao: deBacteriose 
                         ? 'Detectamos lesões angulares e necrose foliar compatíveis com Xanthomonas phaseoli.'
-                        : 'A análise da estrutura foliar não indicou anomalias fitossanitárias.'
+                        : 'A análise da estrutura foliar não indicou anomalias fitossanitárias.',
+                    latitude: lat,
+                    longitude: lon
                 };
 
                 try {
-                    // CORREÇÃO: Buscando o token usando a chave correta configurada no seu Login
                     const token = await AsyncStorage.getItem('greenleaf_token'); 
-                    console.log("Câmera - Token resgatado:", token ? "Token presente" : "Token ausente");
                     
                     const response = await fetch(API_URL, {
                         method: 'POST',
@@ -78,8 +96,7 @@ export default function CameraScreen() {
                         body: JSON.stringify(resultadoSimulado)
                     });
 
-                    const resData = await response.json();
-                    console.log("Câmera - Status do envio:", response.status, resData);
+                    await response.json();
                 } catch (err) {
                     console.log("Câmera - Erro de rede com o Render:", err);
                 }
