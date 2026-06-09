@@ -104,7 +104,7 @@ const updateMe = async (req, res) => {
     }
 };
 
-// 🌟 FUNÇÃO ATUALIZADA E BLINDADA CONTRA ERROS INTERNOS NATIVOS
+// 🛠️ FUNÇÃO ENVIARSUPORTEEMAIL CORRIGIDA: REMOVIDA A CRIAÇÃO PREMATURA DE NOTIFICAÇÃO
 const enviarSuporteEmail = async (req, res) => {
     console.log("=== [SUPORTE DISCORD] Nova requisição recebida no backend ===");
     
@@ -130,7 +130,6 @@ const enviarSuporteEmail = async (req, res) => {
 
         const urlDoServidor = 'https://greenleafmobile.onrender.com';
 
-        // Montando o texto com os links dinâmicos de resposta
         const conteudoMensagem = 
 `🌱 **NOVO CHAMADO DE SUPORTE - GREENLEAF**
 👤 **Produtor:** ${remetenteNome}
@@ -146,13 +145,11 @@ ${pergunta}
 ✉️ [**1. Responder por E-mail (Abrir Gmail)**](https://mail.google.com/mail/?view=cm&fs=1&to=${remetenteEmail}&su=Re:+Chamado+de+Suporte+GreenLeaf)
 🚀 [**2. Notificar Produtor no App (Marcar como Respondido)**](${urlDoServidor}/api/users/notifications/trigger-reply/${req.userId})`;
 
-        // 🛠️ BLINDAGEM AQUI: Criando o FormData sem quebrar o Node corporativo usando os tipos nativos globais corretos
         const formDataDiscord = new global.FormData();
         formDataDiscord.append('content', conteudoMensagem);
 
         if (arquivoImagem) {
             console.log("=== [SUPORTE DISCORD] Anexando o arquivo binário com segurança ===");
-            // Criação segura do arquivo sem invocar o construtor global do Blob antigo
             const arquivoBlob = new global.Blob([arquivoImagem.buffer], { type: arquivoImagem.mimetype });
             formDataDiscord.append('file', arquivoBlob, arquivoImagem.originalname || 'suporte_screenshot.jpg');
         }
@@ -164,7 +161,7 @@ ${pergunta}
         });
 
         if (responseDiscord.ok) {
-            console.log("=== [SUPORTE DISCORD] Sucesso completo! ===");
+            console.log("=== [SUPORTE DISCORD] Sucesso completo! Sem criar notificações prematuras. ===");
             return res.status(200).json({ message: 'Sua dúvida foi encaminhada com sucesso!' });
         } else {
             const erroTexto = await responseDiscord.text();
@@ -173,14 +170,13 @@ ${pergunta}
         }
 
     } catch (error) {
-        // Isso vai cuspir o erro idêntico no painel do Render para sabermos a linha exata se algo falhar
         console.error('=== [SUPORTE DISCORD] Erro Detalhado no Catch ===');
         console.error(error.stack || error);
         return res.status(500).json({ message: 'Erro interno ao tentar processar o chamado de suporte.' });
     }
 };
 
-// 🌟 FUNÇÃO DISPARADA PELO CLIQUE NO DISCORD
+// 🌟 ÚNICO LUGAR QUE CRIA A NOTIFICAÇÃO DE RESPOSTA DO SUPORTE NO BANCO
 const triggerNotificationReply = async (req, res) => {
     try {
         const { idProdutor } = req.params;
