@@ -30,6 +30,7 @@ export default function PrincipalScreen() {
     const insets = useSafeAreaInsets();
     const [profileName, setProfileName] = useState('Usuário');
     const [profilePhotoUri, setProfilePhotoUri] = useState('');
+    const [temNotificacaoNova, setTemNotificacaoNova] = useState(false);
     
     const handleLogout = async () => {
         try {
@@ -46,8 +47,24 @@ export default function PrincipalScreen() {
     useFocusEffect(
         useCallback(() => {
             let isMounted = true;
+            let intervaloChecagem: any = null;
 
-            const loadProfile = async () => {
+            const checarNotificacoesStatus = async (token: string) => {
+                try {
+                    const respNotif = await fetch(`${API_BASE_URL}/api/users/notifications`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (respNotif.ok && isMounted) {
+                        const listaNotificacoes = await respNotif.json();
+                        const possuiNovas = listaNotificacoes.some((n: any) => n.lida === false);
+                        setTemNotificacaoNova(possuiNovas);
+                    }
+                } catch (err) {
+                    console.log("Erro na checagem automática de alertas:", err);
+                }
+            };
+
+            const loadProfileAndNotifications = async () => {
                 try {
                     const token = await AsyncStorage.getItem('greenleaf_token');
                     if (token && isMounted) {
@@ -60,27 +77,26 @@ export default function PrincipalScreen() {
                                 setProfileName(server && server.name ? server.name.trim() : 'Usuário');
                                 setProfilePhotoUri(server.photoUri || '');
                                 await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ name: server.name || '', photoUri: server.photoUri || '' }));
-                                return;
                             }
                         }
+
+                        await checarNotificacoesStatus(token);
+
+                        intervaloChecagem = global.setInterval(() => {
+                            checarNotificacoesStatus(token);
+                        }, 10000);
                     }
 
-                    const saved = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
-
-                    if (!saved) {
-                        if (isMounted) {
-                            setProfileName('Usuário');
-                            setProfilePhotoUri('');
-                        }
-                        return;
-                    }
-
-                    const profile = JSON.parse(saved) as { name?: string; photoUri?: string };
                     if (isMounted) {
-                        setProfileName(profile && profile.name ? profile.name.trim() : 'Usuário');
-                        setProfilePhotoUri(profile.photoUri || '');
+                        const saved = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
+                        if (saved) {
+                            const profile = JSON.parse(saved) as { name?: string; photoUri?: string };
+                            setProfileName(profile && profile.name ? profile.name.trim() : 'Usuário');
+                            setProfilePhotoUri(profile.photoUri || '');
+                        }
                     }
                 } catch (error) {
+                    console.error("Erro ao sincronizar dados na Home:", error);
                     if (isMounted) {
                         setProfileName('Usuário');
                         setProfilePhotoUri('');
@@ -88,10 +104,11 @@ export default function PrincipalScreen() {
                 }
             };
 
-            loadProfile();
+            loadProfileAndNotifications();
 
             return () => {
                 isMounted = false;
+                if (intervaloChecagem) global.clearInterval(intervaloChecagem);
             };
         }, [])
     );
@@ -137,19 +154,14 @@ export default function PrincipalScreen() {
                     </TouchableOpacity>
 
                     <View style={[styles.headerActions, compact && styles.headerActionsCompact]}>
-                        {/* 🔔 ÍCONE DE NOTIFICAÇÃO CONFIGURADO PARA NOTIFICACIONESSCREEN */}
                         <TouchableOpacity 
                             activeOpacity={0.8} 
                             onPress={() => router.push('/NotificacoesScreen')}
                         >
                             <View style={[styles.smallIconCircle, compact && styles.smallIconCircleCompact]}>
                                 <Ionicons name="notifications" size={compact ? 14 : 20} color="#ffffff" />
-                                <View style={styles.notifyDot} />
+                                {temNotificacaoNova && <View style={styles.notifyDot} />}
                             </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity activeOpacity={0.8} style={[styles.smallIconCircle, compact && styles.smallIconCircleCompact]}>
-                            <Ionicons name="search" size={compact ? 14 : 20} color="#ffffff" />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -226,8 +238,8 @@ const styles = StyleSheet.create({
     nameTouchArea: { flex: 1, minWidth: 0 },
     userName: { marginLeft: 10, fontSize: 32, fontWeight: '700', color: '#4a4a4a' },
     userNameCompact: { fontSize: 26, marginLeft: 8 },
-    headerActions: { marginLeft: 8, flexDirection: 'row', gap: 12 },
-    headerActionsCompact: { gap: 8 },
+    headerActions: { marginLeft: 8, flexDirection: 'row', alignItems: 'center' },
+    headerActionsCompact: { gap: 0 },
     smallIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#545454', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.22, shadowRadius: 1.7, elevation: 4 },
     smallIconCircleCompact: { width: 32, height: 32, borderRadius: 16 },
     notifyDot: { position: 'absolute', top: 5, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: '#59be4b' },

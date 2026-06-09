@@ -38,7 +38,6 @@ export default function TelaConfigScreen() {
 
                 <View style={[styles.rows, compact && styles.rowsCompact]}>
                     <ConfigRow iconName="person" label="Perfil" onPress={() => router.push('/perfil')} />
-                    <ConfigRow iconName="notifications" label="Notificações" />
                     <ConfigRow iconName="eye" label="Acessibilidade" />
                     <ConfigRow iconName="lock-closed" label="Privacidade" />
                     <ConfigRow iconName="headset" label="Suporte" onPress={() => router.push('/telasuporte')} />
