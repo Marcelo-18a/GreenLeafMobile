@@ -5,15 +5,6 @@ const nodemailer = require('nodemailer');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret';
 
-// CONFIGURAÇÃO DO TRANSMISSOR DO NODEMAILER UTILIZANDO AS VARIÁVEIS DO .ENV
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_SUPORTE,
-        pass: process.env.EMAIL_SENHA_APP
-    }
-});
-
 const getUsers = async (req, res) => {
     try {
         const users = await User.find().select('-password');
@@ -113,25 +104,38 @@ const updateMe = async (req, res) => {
     }
 };
 
-// NOVA FUNÇÃO: PROCESSA A MENSAGEM DO SUPORTE E DISPARA O E-MAIL
+// FUNÇÃO ATUALIZADA: PROCESSA A MENSAGEM DO SUPORTE E DISPARA O E-MAIL COM BLINDAGEM DE ESCOPO
 const enviarSuporteEmail = async (req, res) => {
+    console.log("=== [SUPORTE] Nova requisição recebida no backend ===");
+    
     try {
         const { pergunta } = req.body;
-        const arquivoImagem = req.file; // Capturado pelo multer configurado nas rotas
+        const arquivoImagem = req.file;
 
         if (!pergunta) {
+            console.log("=== [SUPORTE] Falha: Campo pergunta vazio ===");
             return res.status(400).json({ message: 'A pergunta do suporte é obrigatória.' });
         }
 
-        // Busca os dados atualizados do produtor que fez a requisição usando o middleware de autenticação
+        console.log("=== [SUPORTE] Buscando usuário logado no banco de dados ===");
         const user = await User.findById(req.userId);
         const remetenteNome = user ? user.name : 'Produtor GreenLeaf';
         const remetenteEmail = user ? user.email : 'E-mail não identificado';
 
-        // Montagem do corpo do e-mail com layout HTML profissional
+        console.log(`=== [SUPORTE] Remetente: ${remetenteNome} <${remetenteEmail}> ===`);
+
+        // Criando o transportador sob demanda para garantir a leitura do .env atualizado
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_SUPORTE,
+                pass: process.env.EMAIL_SENHA_APP
+            }
+        });
+
         const mailOptions = {
             from: `"GreenLeaf Suporte" <${process.env.EMAIL_SUPORTE}>`,
-            to: process.env.EMAIL_SUPORTE, // Envia para a sua própria caixa de entrada definida no .env
+            to: process.env.EMAIL_SUPORTE,
             subject: '🌱 Novo Chamado de Suporte Técnico - GreenLeaf',
             html: `
                 <div style="font-family: sans-serif; padding: 25px; color: #333; max-width: 600px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fdfdfd;">
@@ -154,21 +158,23 @@ const enviarSuporteEmail = async (req, res) => {
             attachments: []
         };
 
-        // Se houver anexo binário enviado pelo Multer, insere no array do Nodemailer
         if (arquivoImagem) {
+            console.log("=== [SUPORTE] Adicionando imagem anexada ao e-mail ===");
             mailOptions.attachments.push({
                 filename: arquivoImagem.originalname || 'suporte_screenshot.jpg',
-                content: arquivoImagem.buffer // Injeta o buffer diretamente da RAM
+                content: arquivoImagem.buffer
             });
         }
 
-        // Executa o envio seguro
+        console.log("=== [SUPORTE] Tentando realizar o disparo com Nodemailer ===");
         await transporter.sendMail(mailOptions);
+        console.log("=== [SUPORTE] E-mail despachado com sucesso! ===");
 
         return res.status(200).json({ message: 'Sua dúvida foi encaminhada com sucesso para nossa equipe!' });
 
     } catch (error) {
-        console.error('Erro no controller de suporte:', error);
+        console.error('=== [SUPORTE] Erro Crítico encontrado ===', error);
+        // Retorna o status de erro para impedir que o celular fique carregando infinito em caso de falha
         return res.status(500).json({ message: 'Erro interno ao tentar processar ou encaminhar o e-mail de suporte.' });
     }
 };
@@ -179,5 +185,5 @@ module.exports = {
     loginUser,
     getMe,
     updateMe,
-    enviarSuporteEmail, // Exportação da nova função adicionada
+    enviarSuporteEmail,
 };

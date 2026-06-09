@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_SUPORTE_URL = 'https://greenleafmobile.onrender.com/api/suporte'; 
+// 🛠️ CORREÇÃO DA URL: Adicionado o prefixo /users para alinhar com o userRoutes.js do backend
+const API_SUPORTE_URL = 'https://greenleafmobile.onrender.com/api/users/suporte'; 
 
 export default function SuporteScreen() {
     const [pergunta, setPergunta] = useState('');
