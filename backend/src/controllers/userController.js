@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Notification = require('../models/Notification'); // Importando o model de notificações
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -103,15 +104,17 @@ const updateMe = async (req, res) => {
     }
 };
 
-// 🌟 NOVA LÓGICA: ENVIA O CHAMADO DIRETAMENTE PARA O SEU WEBHOOK DO DISCORD
+// 🌟 FUNÇÃO DE SUPORTE ADAPTADA PARA GERAR OS LINKS DE CONTROLE NO CARD DO DISCORD
 const enviarSuporteEmail = async (req, res) => {
     console.log("=== [SUPORTE DISCORD] Nova requisição recebida no backend ===");
     
     try {
-        const { pergunta } = req.body;
+        const { pregunta } = req.body; // Mantendo o mapeamento correto do seu formulário do app
         const arquivoImagem = req.file;
 
-        if (!pergunta) {
+        const perguntaTexto = pergunta;
+
+        if (!perguntaTexto) {
             console.log("=== [SUPORTE DISCORD] Falha: Campo pergunta vazio ===");
             return res.status(400).json({ message: 'A pergunta do suporte é obrigatória.' });
         }
@@ -127,10 +130,12 @@ const enviarSuporteEmail = async (req, res) => {
             return res.status(500).json({ message: 'Configuração do servidor incompleta.' });
         }
 
-        // Criando o FormData multipart estruturado que o Discord exige para receber anexos
+        // URL base do Render para construir o link que o atendente vai clicar de dentro do Discord
+        const urlDoServidor = 'https://greenleafmobile.onrender.com';
+
         const formDataDiscord = new FormData();
 
-        // Template de texto limpo para renderizar direto no chat do Discord
+        // Template injetando as duas ações clicáveis para o administrador do suporte
         const conteudoMensagem = 
 `🌱 **NOVO CHAMADO DE SUPORTE - GREENLEAF**
 👤 **Produtor:** ${remetenteNome}
@@ -139,12 +144,15 @@ const enviarSuporteEmail = async (req, res) => {
 
 📝 **Dúvida/Problema Relatado:**
 \`\`\`
-${pergunta}
-\`\`\``;
+${perguntaTexto}
+\`\`\`
+
+📥 **Painel de Ações do Atendente:**
+✉️ [**1. Responder por E-mail (Abrir Gmail)**](https://mail.google.com/mail/?view=cm&fs=1&to=${remetenteEmail}&su=Re:+Chamado+de+Suporte+GreenLeaf)
+🚀 [**2. Notificar Produtor no App (Marcar como Respondido)**](${urlDoServidor}/api/users/notifications/trigger-reply/${req.userId})`;
 
         formDataDiscord.append('content', conteudoMensagem);
 
-        // Se o multer pegou a imagem enviada pelo app, transforma o buffer e anexa
         if (arquivoImagem) {
             console.log("=== [SUPORTE DISCORD] Convertendo e anexando o arquivo binário ===");
             const blob = new Blob([arquivoImagem.buffer], { type: arquivoImagem.mimetype });
@@ -159,7 +167,7 @@ ${pergunta}
 
         if (responseDiscord.ok) {
             console.log("=== [SUPORTE DISCORD] Sucesso completo! ===");
-            return res.status(200).json({ message: 'Sua dúvida foi encaminhada com sucesso para nossa equipe!' });
+            return res.status(200).json({ message: 'Sua dúvida foi encaminhada com sucesso!' });
         } else {
             const erroTexto = await responseDiscord.text();
             console.error("=== [SUPORTE DISCORD] O Discord recusou a requisição: ===", erroTexto);
@@ -172,6 +180,57 @@ ${pergunta}
     }
 };
 
+// 🌟 NOVA FUNÇÃO: DISPARADA QUANDO O LINK DO DISCORD É CLICADO NO NAVEGADOR
+const triggerNotificationReply = async (req, res) => {
+    try {
+        const { idProdutor } = req.params;
+
+        // Cria a notificação de resposta enviada diretamente na conta do produtor no MongoDB
+        await Notification.create({
+            userId: idProdutor,
+            tipo: 'suporte',
+            titulo: '💬 Suporte Respondido!',
+            mensagem: 'A nossa equipe técnica analisou o seu chamado e acabou de enviar as instruções detalhadas de correção para o seu e-mail cadastrado. Confira a sua caixa de entrada!'
+        });
+
+        // Retorna um HTML básico de sucesso para o atendente ver na tela do PC ao clicar
+        res.send(`
+            <div style="font-family: sans-serif; text-align: center; padding: 60px 20px;">
+                <div style="max-width: 450px; margin: 0 auto; border: 1px solid #e0e0e0; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <h1 style="color: #57b947; margin-bottom: 10px;">✓ Sucesso Técnico!</h1>
+                    <p style="font-size: 16px; color: #444; line-height: 1.5;">A notificação de atendimento concluído foi injetada diretamente no celular do produtor rural no banco de dados.</p>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        console.error('Erro no gatilho de notificação:', error);
+        res.status(500).send('Erro interno do servidor ao tentar processar o gatilho.');
+    }
+};
+
+const getNotifications = async (req, res) => {
+    try {
+        const notifications = await Notification.find({ userId: req.userId }).sort({ createdAt: -1 });
+        res.json(notifications);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar notificações' });
+    }
+};
+
+const updateNotificationsRead = async (req, res) => {
+    try {
+        const { id } = req.body;
+        if (id) {
+            await Notification.updateMany({ _id: id, userId: req.userId }, { lida: true });
+        } else {
+            await Notification.updateMany({ userId: req.userId, lida: false }, { lida: true });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao atualizar notificações' });
+    }
+};
+
 module.exports = {
     getUsers,
     createUser,
@@ -179,4 +238,7 @@ module.exports = {
     getMe,
     updateMe,
     enviarSuporteEmail,
+    triggerNotificationReply, // Exportando o novo gatilho do Discord
+    getNotifications,
+    updateNotificationsRead
 };

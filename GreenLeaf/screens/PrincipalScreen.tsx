@@ -104,7 +104,7 @@ export default function PrincipalScreen() {
                     activeOpacity={0.85}
                     style={[
                         styles.topLeftLogout,
-                        compact && styles.topLeftLogoutCompact,
+                        styles.topLeftLogoutCompact,
                         { top: logoutTop },
                     ]}>
                     <Ionicons name="log-out-outline" size={compact ? 18 : 22} color="#ffffff" />
@@ -137,9 +137,15 @@ export default function PrincipalScreen() {
                     </TouchableOpacity>
 
                     <View style={[styles.headerActions, compact && styles.headerActionsCompact]}>
-                        <TouchableOpacity activeOpacity={0.8} style={[styles.smallIconCircle, compact && styles.smallIconCircleCompact]}>
-                            <Ionicons name="notifications" size={compact ? 14 : 20} color="#ffffff" />
-                            <View style={styles.notifyDot} />
+                        {/* 🔔 ÍCONE DE NOTIFICAÇÃO CONFIGURADO PARA NOTIFICACIONESSCREEN */}
+                        <TouchableOpacity 
+                            activeOpacity={0.8} 
+                            onPress={() => router.push('/NotificacoesScreen')}
+                        >
+                            <View style={[styles.smallIconCircle, compact && styles.smallIconCircleCompact]}>
+                                <Ionicons name="notifications" size={compact ? 14 : 20} color="#ffffff" />
+                                <View style={styles.notifyDot} />
+                            </View>
                         </TouchableOpacity>
 
                         <TouchableOpacity activeOpacity={0.8} style={[styles.smallIconCircle, compact && styles.smallIconCircleCompact]}>
