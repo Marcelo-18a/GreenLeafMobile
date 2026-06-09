@@ -47,30 +47,48 @@ export default function CameraScreen() {
     const takePicture = async () => {
         if (cameraRef.current && !isScanning) {
             try {
-                // Pede a permissão de localização em tempo de execução
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                let lat = -24.7125; // Fallback padrão da região de Pariquera-Açu se falhar
+                // FLUXO OTIMIZADO 1: Configuração ultra leve para capturar a imagem na hora
+                const options = { 
+                    quality: 0.4,           // Reduz ligeiramente para poupar memória cache RAM
+                    skipProcessing: true    // Ignora o processamento do chip gráfico nativo no clique
+                };
+                
+                // Dispara o hardware da câmera imediatamente (Clique Instantâneo)
+                const data = await cameraRef.current.takePictureAsync(options);
+                const capturedUri = data.uri;
+
+                // Ativa a tela de varredura com a foto capturada sem delays
+                setPhoto(capturedUri);
+                setIsScanning(true);
+
+                // FLUXO OTIMIZADO 2: Coleta de localização inteligente em segundo plano
+                let lat = -24.7125; // Fallback Pariquera-Açu
                 let lon = -47.8824;
 
+                const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status === 'granted') {
                     try {
-                        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-                        lat = location.coords.latitude;
-                        lon = location.coords.longitude;
+                        // Busca a última posição registrada no cache do aparelho (Zero atraso de requisição por satélite)
+                        const lastLocation = await Location.getLastKnownPositionAsync({});
+                        if (lastLocation) {
+                            lat = lastLocation.coords.latitude;
+                            lon = lastLocation.coords.longitude;
+                        } else {
+                            // Se o cache estiver vazio, faz uma busca rápida balanceada de baixa latência
+                            const quickLocation = await Location.getCurrentPositionAsync({ 
+                                accuracy: Location.Accuracy.Low 
+                            });
+                            lat = quickLocation.coords.latitude;
+                            lon = quickLocation.coords.longitude;
+                        }
                     } catch (e) {
-                        // Se o emulador/celular demorar para responder o GPS, adiciona variação aleatória perto do padrão
+                        // Adiciona variação aleatória de segurança perto da região
                         lat = lat + (Math.random() - 0.5) * 0.02;
                         lon = lon + (Math.random() - 0.5) * 0.02;
                     }
                 }
 
-                const options = { quality: 0.7, skipProcessing: false };
-                const data = await cameraRef.current.takePictureAsync(options);
-                const capturedUri = data.uri;
-
-                setPhoto(capturedUri);
-                setIsScanning(true);
-
+                // Monta o objeto simulado de bacteriose foliar
                 const deBacteriose = Math.random() > 0.5;
                 const resultadoSimulado = {
                     photoUri: capturedUri,
@@ -84,6 +102,7 @@ export default function CameraScreen() {
                     longitude: lon
                 };
 
+                // Despacha os dados para a sua API no Render
                 try {
                     const token = await AsyncStorage.getItem('greenleaf_token'); 
                     
@@ -101,6 +120,7 @@ export default function CameraScreen() {
                     console.log("Câmera - Erro de rede com o Render:", err);
                 }
 
+                // Mantém o tempo visual do scanner na tela para o usuário e redireciona
                 setTimeout(() => {
                     setIsScanning(false);
                     setPhoto(null);
@@ -115,7 +135,7 @@ export default function CameraScreen() {
                             mockedDesc: resultadoSimulado.descricao
                         }
                     });
-                }, 5000);
+                }, 4000); // Reduzido para 4 segundos para deixar o app mais dinâmico
 
             } catch (error) {
                 console.log("Erro ao capturar foto:", error);
@@ -209,4 +229,4 @@ const styles = StyleSheet.create({
     loadingBox: { padding: 24, borderRadius: 16, backgroundColor: 'rgba(0, 0, 0, 0.75)', alignItems: 'center', justifyContent: 'center' },
     scanText: { color: '#fff', fontSize: 16, marginTop: 16, fontWeight: '600', textAlign: 'center' },
     scanLine: { width: '100%', height: 5, backgroundColor: '#5bbb48', position: 'absolute', zIndex: 10 }
-});
+}); 

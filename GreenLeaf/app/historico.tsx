@@ -48,49 +48,6 @@ export default function HistoricoScreen() {
         }
     };
 
-    // FUNÇÃO PARA EDITAR O DIAGNÓSTICO
-    const handleEditar = async (item: DiagnosticoItem) => {
-        // Abre um prompt nativo para o usuário digitar a nova descrição/anotação
-        Alert.prompt(
-            "Editar Anotação",
-            "Modifique a descrição do diagnóstico foliar:",
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Salvar",
-                    onPress: async (novoTexto) => {
-                        if (!novoTexto) return;
-                        try {
-                            const token = await AsyncStorage.getItem('greenleaf_token');
-                            const response = await fetch(`${API_URL}/${item._id}`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({
-                                    statusText: item.statusText, // Mantém o status original da IA
-                                    descricao: novoTexto // Altera apenas o texto descritivo
-                                })
-                            });
-
-                            if (response.ok) {
-                                Alert.alert("Sucesso", "Registro atualizado.");
-                                carregarHistorico(); // Recarrega a lista instantaneamente
-                            } else {
-                                Alert.alert("Erro", "Não foi possível salvar as alterações.");
-                            }
-                        } catch (e) {
-                            console.log(e);
-                        }
-                    }
-                }
-            ],
-            "plain-text",
-            item.descricao
-        );
-    };
-
     // FUNÇÃO PARA DELETAR O DIAGNÓSTICO
     const handleDeletar = (id: string) => {
         Alert.alert(
@@ -159,12 +116,8 @@ export default function HistoricoScreen() {
                     </View>
                 </TouchableOpacity>
 
-                {/* PAINEL LATERAL DE AÇÕES (EDITAR/DELETAR) */}
+                {/* PAINEL LATERAL DE AÇÕES (APENAS DELETAR) */}
                 <View style={styles.actionPanel}>
-                    <TouchableOpacity style={styles.actionButton} onPress={() => handleEditar(item)}>
-                        <Ionicons name="pencil" size={18} color="#57b947" />
-                    </TouchableOpacity>
-                    <View style={styles.actionDivider} />
                     <TouchableOpacity style={styles.actionButton} onPress={() => handleDeletar(item._id)}>
                         <Ionicons name="trash" size={18} color="#d9534f" />
                     </TouchableOpacity>
@@ -257,11 +210,6 @@ const styles = StyleSheet.create({
         width: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    actionDivider: {
-        width: '60%',
-        height: 1,
-        backgroundColor: '#eee'
     },
     loadingText: { marginTop: 10, color: '#555', fontWeight: '600' },
     emptyText: { marginTop: 12, color: '#777', fontSize: 16, fontWeight: '500', textAlign: 'center' }
