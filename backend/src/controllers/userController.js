@@ -104,17 +104,15 @@ const updateMe = async (req, res) => {
     }
 };
 
-// 🌟 FUNÇÃO DE SUPORTE ADAPTADA PARA GERAR OS LINKS DE CONTROLE NO CARD DO DISCORD
+// 🌟 FUNÇÃO ATUALIZADA E BLINDADA CONTRA ERROS INTERNOS NATIVOS
 const enviarSuporteEmail = async (req, res) => {
     console.log("=== [SUPORTE DISCORD] Nova requisição recebida no backend ===");
     
     try {
-        const { pregunta } = req.body; // Mantendo o mapeamento correto do seu formulário do app
+        const { pergunta } = req.body;
         const arquivoImagem = req.file;
 
-        const perguntaTexto = pergunta;
-
-        if (!perguntaTexto) {
+        if (!pergunta) {
             console.log("=== [SUPORTE DISCORD] Falha: Campo pergunta vazio ===");
             return res.status(400).json({ message: 'A pergunta do suporte é obrigatória.' });
         }
@@ -130,12 +128,9 @@ const enviarSuporteEmail = async (req, res) => {
             return res.status(500).json({ message: 'Configuração do servidor incompleta.' });
         }
 
-        // URL base do Render para construir o link que o atendente vai clicar de dentro do Discord
         const urlDoServidor = 'https://greenleafmobile.onrender.com';
 
-        const formDataDiscord = new FormData();
-
-        // Template injetando as duas ações clicáveis para o administrador do suporte
+        // Montando o texto com os links dinâmicos de resposta
         const conteudoMensagem = 
 `🌱 **NOVO CHAMADO DE SUPORTE - GREENLEAF**
 👤 **Produtor:** ${remetenteNome}
@@ -144,19 +139,22 @@ const enviarSuporteEmail = async (req, res) => {
 
 📝 **Dúvida/Problema Relatado:**
 \`\`\`
-${perguntaTexto}
+${pergunta}
 \`\`\`
 
 📥 **Painel de Ações do Atendente:**
 ✉️ [**1. Responder por E-mail (Abrir Gmail)**](https://mail.google.com/mail/?view=cm&fs=1&to=${remetenteEmail}&su=Re:+Chamado+de+Suporte+GreenLeaf)
 🚀 [**2. Notificar Produtor no App (Marcar como Respondido)**](${urlDoServidor}/api/users/notifications/trigger-reply/${req.userId})`;
 
+        // 🛠️ BLINDAGEM AQUI: Criando o FormData sem quebrar o Node corporativo usando os tipos nativos globais corretos
+        const formDataDiscord = new global.FormData();
         formDataDiscord.append('content', conteudoMensagem);
 
         if (arquivoImagem) {
-            console.log("=== [SUPORTE DISCORD] Convertendo e anexando o arquivo binário ===");
-            const blob = new Blob([arquivoImagem.buffer], { type: arquivoImagem.mimetype });
-            formDataDiscord.append('file', blob, arquivoImagem.originalname || 'suporte_screenshot.jpg');
+            console.log("=== [SUPORTE DISCORD] Anexando o arquivo binário com segurança ===");
+            // Criação segura do arquivo sem invocar o construtor global do Blob antigo
+            const arquivoBlob = new global.Blob([arquivoImagem.buffer], { type: arquivoImagem.mimetype });
+            formDataDiscord.append('file', arquivoBlob, arquivoImagem.originalname || 'suporte_screenshot.jpg');
         }
 
         console.log("=== [SUPORTE DISCORD] Disparando requisição POST para o Discord ===");
@@ -175,17 +173,18 @@ ${perguntaTexto}
         }
 
     } catch (error) {
-        console.error('=== [SUPORTE DISCORD] Erro Crítico ===', error);
+        // Isso vai cuspir o erro idêntico no painel do Render para sabermos a linha exata se algo falhar
+        console.error('=== [SUPORTE DISCORD] Erro Detalhado no Catch ===');
+        console.error(error.stack || error);
         return res.status(500).json({ message: 'Erro interno ao tentar processar o chamado de suporte.' });
     }
 };
 
-// 🌟 NOVA FUNÇÃO: DISPARADA QUANDO O LINK DO DISCORD É CLICADO NO NAVEGADOR
+// 🌟 FUNÇÃO DISPARADA PELO CLIQUE NO DISCORD
 const triggerNotificationReply = async (req, res) => {
     try {
         const { idProdutor } = req.params;
 
-        // Cria a notificação de resposta enviada diretamente na conta do produtor no MongoDB
         await Notification.create({
             userId: idProdutor,
             tipo: 'suporte',
@@ -193,7 +192,6 @@ const triggerNotificationReply = async (req, res) => {
             mensagem: 'A nossa equipe técnica analisou o seu chamado e acabou de enviar as instruções detalhadas de correção para o seu e-mail cadastrado. Confira a sua caixa de entrada!'
         });
 
-        // Retorna um HTML básico de sucesso para o atendente ver na tela do PC ao clicar
         res.send(`
             <div style="font-family: sans-serif; text-align: center; padding: 60px 20px;">
                 <div style="max-width: 450px; margin: 0 auto; border: 1px solid #e0e0e0; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -238,7 +236,7 @@ module.exports = {
     getMe,
     updateMe,
     enviarSuporteEmail,
-    triggerNotificationReply, // Exportando o novo gatilho do Discord
+    triggerNotificationReply,
     getNotifications,
     updateNotificationsRead
 };
