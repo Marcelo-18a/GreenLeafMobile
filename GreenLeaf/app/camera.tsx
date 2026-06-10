@@ -3,19 +3,200 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dim
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 const API_URL = 'https://greenleafmobile.onrender.com/api/diagnosticos'; 
 
 export default function CameraScreen() {
+    const params = useLocalSearchParams();
+    const imagemVindaDaGaleria = params.imagemSelecionada as string;
+
     const [permission, requestPermission] = useCameraPermissions();
     const [photo, setPhoto] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const cameraRef = useRef<any>(null);
     const scanAnim = useRef(new Animated.Value(0)).current;
 
+    // ========================================================
+    // 1. DECLARAÇÃO DAS FUNÇÕES (No topo para evitar "undefined")
+    // ========================================================
+
+    // FUNÇÃO QUE PROCESSA A FOTO VINDA DA GALERIA
+    const analisarImagemDireta = async (uri: string) => {
+        try {
+            setPhoto(uri);
+            setIsScanning(true);
+
+            let lat = -24.7125; // Fallback Pariquera-Açu
+            let lon = -47.8824;
+
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+                try {
+                    const lastLocation = await Location.getLastKnownPositionAsync({});
+                    if (lastLocation) {
+                        lat = lastLocation.coords.latitude;
+                        lon = lastLocation.coords.longitude;
+                    } else {
+                        const quickLocation = await Location.getCurrentPositionAsync({ 
+                            accuracy: Location.Accuracy.Low 
+                        });
+                        lat = quickLocation.coords.latitude;
+                        lon = quickLocation.coords.longitude;
+                    }
+                } catch (e) {
+                    lat = lat + (Math.random() - 0.5) * 0.02;
+                    lon = lon + (Math.random() - 0.5) * 0.02;
+                }
+            }
+
+            const deBacteriose = Math.random() > 0.5;
+            const resultadoSimulado = {
+                photoUri: uri,
+                statusText: deBacteriose ? 'Bacteriose Detectada' : 'Nenhuma Bacteriose Encontrada',
+                probabilidade: deBacteriose ? Math.floor(Math.random() * (98 - 72 + 1)) + 72 : Math.floor(Math.random() * (99 - 88 + 1)) + 88,
+                cor: deBacteriose ? '#d9534f' : '#5bbb48',
+                descricao: deBacteriose 
+                    ? 'Detectamos lesões angulares e necrose foliar compatíveis com Xanthomonas phaseoli.'
+                    : 'A análise da estrutura foliar não indicou anomalias fitossanitárias.',
+                latitude: lat,
+                longitude: lon
+            };
+
+            try {
+                const token = await AsyncStorage.getItem('greenleaf_token'); 
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(resultadoSimulado)
+                });
+            } catch (err) {
+                console.log("Câmera - Erro de rede com o Render:", err);
+            }
+
+            setTimeout(() => {
+                router.replace({
+                    pathname: "/resultado",
+                    params: { 
+                        photoUri: uri,
+                        mockedStatus: resultadoSimulado.statusText,
+                        mockedProb: String(resultadoSimulado.probabilidade),
+                        mockedCor: resultadoSimulado.cor,
+                        mockedDesc: resultadoSimulado.descricao
+                    }
+                });
+            }, 4000);
+
+        } catch (error) {
+            console.log("Erro ao processar imagem da galeria:", error);
+            setIsScanning(false);
+            setPhoto(null);
+        }
+    };
+
+    // FUNÇÃO QUE CAPTURA A FOTO PELA LENTE DO CELULAR
+    const takePicture = async () => {
+        if (cameraRef.current && !isScanning) {
+            try {
+                const options = { 
+                    quality: 0.4,          
+                    skipProcessing: true    
+                };
+                
+                const data = await cameraRef.current.takePictureAsync(options);
+                const capturedUri = data.uri;
+
+                setPhoto(capturedUri);
+                setIsScanning(true);
+
+                let lat = -24.7125; 
+                let lon = -47.8824;
+
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                    try {
+                        const lastLocation = await Location.getLastKnownPositionAsync({});
+                        if (lastLocation) {
+                            lat = lastLocation.coords.latitude;
+                            lon = lastLocation.coords.longitude;
+                        } else {
+                            const quickLocation = await Location.getCurrentPositionAsync({ 
+                                accuracy: Location.Accuracy.Low 
+                            });
+                            lat = quickLocation.coords.latitude;
+                            lon = quickLocation.coords.longitude;
+                        }
+                    } catch (e) {
+                        lat = lat + (Math.random() - 0.5) * 0.02;
+                        lon = lon + (Math.random() - 0.5) * 0.02;
+                    }
+                }
+
+                const deBacteriose = Math.random() > 0.5;
+                const resultadoSimulado = {
+                    photoUri: capturedUri,
+                    statusText: deBacteriose ? 'Bacteriose Detectada' : 'Nenhuma Bacteriose Encontrada',
+                    probabilidade: deBacteriose ? Math.floor(Math.random() * (98 - 72 + 1)) + 72 : Math.floor(Math.random() * (99 - 88 + 1)) + 88,
+                    cor: deBacteriose ? '#d9534f' : '#5bbb48',
+                    descricao: deBacteriose 
+                        ? 'Detectamos lesões angulares e necrose foliar compatíveis com Xanthomonas phaseoli.'
+                        : 'A análise da estrutura foliar não indicou anomalias fitossanitárias.',
+                    latitude: lat,
+                    longitude: lon
+                };
+
+                try {
+                    const token = await AsyncStorage.getItem('greenleaf_token'); 
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(resultadoSimulado)
+                    });
+                } catch (err) {
+                    console.log("Câmera - Erro de rede com o Render:", err);
+                }
+
+                setTimeout(() => {
+                    router.replace({
+                        pathname: "/resultado",
+                        params: { 
+                            photoUri: capturedUri,
+                            mockedStatus: resultadoSimulado.statusText,
+                            mockedProb: String(resultadoSimulado.probabilidade),
+                            mockedCor: resultadoSimulado.cor,
+                            mockedDesc: resultadoSimulado.descricao
+                        }
+                    });
+                }, 4000); 
+
+            } catch (error) {
+                console.log("Erro ao capturar foto:", error);
+                setIsScanning(false);
+                setPhoto(null);
+            }
+        }
+    };
+
+    // ========================================================
+    // 2. HOOKS DE EFEITO (Executados após as funções existirem)
+    // ========================================================
+    
+    // Executa a varredura se vier da galeria
+    useEffect(() => {
+        if (imagemVindaDaGaleria && !isScanning && !photo) {
+            analisarImagemDireta(imagemVindaDaGaleria);
+        }
+    }, [imagemVindaDaGaleria]);
+
+    // Loop da animação da barra laser
     useEffect(() => {
         if (isScanning) {
             scanAnim.setValue(0);
@@ -44,111 +225,12 @@ export default function CameraScreen() {
         );
     }
 
-    const takePicture = async () => {
-        if (cameraRef.current && !isScanning) {
-            try {
-                // FLUXO OTIMIZADO 1: Configuração ultra leve para capturar a imagem na hora
-                const options = { 
-                    quality: 0.4,           // Reduz ligeiramente para poupar memória cache RAM
-                    skipProcessing: true    // Ignora o processamento do chip gráfico nativo no clique
-                };
-                
-                // Dispara o hardware da câmera imediatamente (Clique Instantâneo)
-                const data = await cameraRef.current.takePictureAsync(options);
-                const capturedUri = data.uri;
-
-                // Ativa a tela de varredura com a foto capturada sem delays
-                setPhoto(capturedUri);
-                setIsScanning(true);
-
-                // FLUXO OTIMIZADO 2: Coleta de localização inteligente em segundo plano
-                let lat = -24.7125; // Fallback Pariquera-Açu
-                let lon = -47.8824;
-
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status === 'granted') {
-                    try {
-                        // Busca a última posição registrada no cache do aparelho (Zero atraso de requisição por satélite)
-                        const lastLocation = await Location.getLastKnownPositionAsync({});
-                        if (lastLocation) {
-                            lat = lastLocation.coords.latitude;
-                            lon = lastLocation.coords.longitude;
-                        } else {
-                            // Se o cache estiver vazio, faz uma busca rápida balanceada de baixa latência
-                            const quickLocation = await Location.getCurrentPositionAsync({ 
-                                accuracy: Location.Accuracy.Low 
-                            });
-                            lat = quickLocation.coords.latitude;
-                            lon = quickLocation.coords.longitude;
-                        }
-                    } catch (e) {
-                        // Adiciona variação aleatória de segurança perto da região
-                        lat = lat + (Math.random() - 0.5) * 0.02;
-                        lon = lon + (Math.random() - 0.5) * 0.02;
-                    }
-                }
-
-                // Monta o objeto simulado de bacteriose foliar
-                const deBacteriose = Math.random() > 0.5;
-                const resultadoSimulado = {
-                    photoUri: capturedUri,
-                    statusText: deBacteriose ? 'Bacteriose Detectada' : 'Nenhuma Bacteriose Encontrada',
-                    probabilidade: deBacteriose ? Math.floor(Math.random() * (98 - 72 + 1)) + 72 : Math.floor(Math.random() * (99 - 88 + 1)) + 88,
-                    cor: deBacteriose ? '#d9534f' : '#5bbb48',
-                    descricao: deBacteriose 
-                        ? 'Detectamos lesões angulares e necrose foliar compatíveis com Xanthomonas phaseoli.'
-                        : 'A análise da estrutura foliar não indicou anomalias fitossanitárias.',
-                    latitude: lat,
-                    longitude: lon
-                };
-
-                // Despacha os dados para a sua API no Render
-                try {
-                    const token = await AsyncStorage.getItem('greenleaf_token'); 
-                    
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(resultadoSimulado)
-                    });
-
-                    await response.json();
-                } catch (err) {
-                    console.log("Câmera - Erro de rede com o Render:", err);
-                }
-
-                // Mantém o tempo visual do scanner na tela para o usuário e redireciona
-                setTimeout(() => {
-                    setIsScanning(false);
-                    setPhoto(null);
-                    
-                    router.replace({
-                        pathname: "/resultado",
-                        params: { 
-                            photoUri: capturedUri,
-                            mockedStatus: resultadoSimulado.statusText,
-                            mockedProb: String(resultadoSimulado.probabilidade),
-                            mockedCor: resultadoSimulado.cor,
-                            mockedDesc: resultadoSimulado.descricao
-                        }
-                    });
-                }, 4000); // Reduzido para 4 segundos para deixar o app mais dinâmico
-
-            } catch (error) {
-                console.log("Erro ao capturar foto:", error);
-                setIsScanning(false);
-            }
-        }
-    };
-
     const lineTopPosition = scanAnim.interpolate({
         inputRange: [0, 1],
         outputRange: [height * 0.15, height * 0.85]
     });
 
+    // TRAVA DE RENDERIZAÇÃO: SE ESTIVER ESCANEANDO, EXIBE APENAS O SCANNER DIGITAL
     if (isScanning && photo) {
         return (
             <View style={styles.scanContainer}>
@@ -168,6 +250,7 @@ export default function CameraScreen() {
         );
     }
 
+    // TELA PADRÃO DA CÂMERA
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -229,4 +312,4 @@ const styles = StyleSheet.create({
     loadingBox: { padding: 24, borderRadius: 16, backgroundColor: 'rgba(0, 0, 0, 0.75)', alignItems: 'center', justifyContent: 'center' },
     scanText: { color: '#fff', fontSize: 16, marginTop: 16, fontWeight: '600', textAlign: 'center' },
     scanLine: { width: '100%', height: 5, backgroundColor: '#5bbb48', position: 'absolute', zIndex: 10 }
-}); 
+});

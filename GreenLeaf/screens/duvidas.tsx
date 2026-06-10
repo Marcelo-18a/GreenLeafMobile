@@ -1,51 +1,109 @@
+import React, { useState } from 'react';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const popularIssues = [
-    'Como identificar bacteriose com Green Leaf?',
-    'Ferrugem nas folhas',
-    'Manchas amareladas',
-    'Folhas secando nas pontas',
+// Estrutura técnica de dados focada em Xanthomonas phaseoli pv. manihotis
+const faqData = [
+    {
+        id: '1',
+        pergunta: 'O que é a Xanthomonas (Bacteriose)?',
+        resposta: 'É uma doença devastadora causada pela bactéria Xanthomonas phaseoli pv. manihotis. Ela penetra pelos estômatos ou ferimentos da folha da mandioca, coloniza os vasos condutores de seiva (xilema) e pode causar a murcha total e morte da planta.'
+    },
+    {
+        id: '2',
+        pergunta: 'Quais os sintomas visuais nas folhas?',
+        resposta: 'Os principais sinais são as "manchas angulares" com aspecto encharcado (parecem úmidas). Com o avanço da infecção, ocorre a queima de folhas, exsudação de goma bacteriana na parte inferior e a desfolha (queda) começando de baixo para cima.'
+    },
+    {
+        id: '3',
+        pergunta: 'Como o GreenLeaf identifica a doença?',
+        resposta: 'O aplicativo utiliza redes neurais convolucionais (Deep Learning) treinadas especificamente para reconhecer a geometria angular e a coloração necrótica das lesões da Xanthomonas, separando tecidos saudáveis de infectados instantaneamente.'
+    },
+    {
+        id: '4',
+        pergunta: 'O que fazer ao detectar um foco?',
+        resposta: 'É altamente recomendado erradicar e queimar as plantas infectadas para conter o contágio. Para os próximos plantios, utilize estacas (manivas) com certificação de sanidade fitossanitária e evite ferramentas compartilhadas sem desinfecção.'
+    },
+    {
+        id: '5',
+        pergunta: 'Como funciona o mapa de calor do app?',
+        resposta: 'Sempre que um diagnóstico aponta "Bacteriose Detectada", o app vincula os dados geométricos à coordenada GPS capturada pelo hardware do celular. Isso gera a densidade de focos acumulada no mapa para gestão de risco.'
+    }
 ];
 
-const popularImages = [
-    'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1468327768560-75b778cbb551?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80',
-    'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=80',
-];
+type AccordionItemProps = {
+    pergunta: string;
+    resposta: string;
+    isOpen: boolean;
+    onToggle: () => void;
+};
+
+function AccordionItem({ pergunta, resposta, isOpen, onToggle }: AccordionItemProps) {
+    return (
+        <View style={styles.card}>
+            <TouchableOpacity style={styles.cardHeader} activeOpacity={0.7} onPress={onToggle}>
+                <Text style={styles.cardTitle}>{pergunta}</Text>
+                <Ionicons 
+                    name={isOpen ? "chevron-up-circle" : "chevron-down-circle"} 
+                    size={26} 
+                    color="#57b947" 
+                />
+            </TouchableOpacity>
+            
+            {isOpen && (
+                <View style={styles.cardContent}>
+                    <Text style={styles.cardText}>{resposta}</Text>
+                </View>
+            )}
+        </View>
+    );
+}
 
 export default function DuvidasScreen() {
+    // Estado para rastrear qual ID de pergunta está aberto (null se nenhum estiver)
+    const [openedId, setOpenedId] = useState<string | null>('1'); // Deixa a primeira aberta por padrão
+
+    const toggleAccordion = (id: string) => {
+        setOpenedId(openedId === id ? null : id);
+    };
+
     return (
         <SafeAreaView style={styles.screen}>
+            {/* TOPO COM LOGO INTEGRADA */}
             <View style={styles.header}>
                 <Image source={require('../assets/images/greenleaf.png')} style={styles.logo} resizeMode="contain" />
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                {/* BOTÃO VOLTAR INTEGRADO AO DESIGN */}
                 <TouchableOpacity activeOpacity={0.75} onPress={() => router.back()} style={styles.backRow}>
-                    <Text style={styles.backText}>← Voltar</Text>
+                    <Ionicons name="arrow-back" size={20} color="#4d4d4d" />
+                    <Text style={styles.backText}>Voltar</Text>
                 </TouchableOpacity>
 
                 <Text style={styles.title}>Dúvidas Frequentes</Text>
+                <Text style={styles.subtitle}>Consulte informações fitossanitárias básicas para manejo e controle da cultura.</Text>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRow}>
-                    {popularIssues.map((text, index) => (
-                        <View key={text} style={[styles.featureCard, index === 0 && styles.featureCardLarge]}>
-                            <Image source={{ uri: popularImages[index % popularImages.length] }} style={styles.featureImage} />
-                            <Text style={styles.featureText}>{text}</Text>
-                        </View>
+                {/* LISTAGEM DOS ACCORDIONS */}
+                <View style={styles.faqList}>
+                    {faqData.map((item) => (
+                        <AccordionItem
+                            key={item.id}
+                            pergunta={item.pergunta}
+                            resposta={item.resposta}
+                            isOpen={openedId === item.id}
+                            onToggle={() => toggleAccordion(item.id)}
+                        />
                     ))}
-                </ScrollView>
+                </View>
 
-                <Text style={styles.sectionTitle}>Manchas Populares</Text>
-
-                <View style={styles.grid}>
-                    {popularImages.concat(popularImages).map((uri, index) => (
-                        <View key={`${uri}-${index}`} style={styles.gridTile}>
-                            <Image source={{ uri }} style={styles.gridImage} />
-                        </View>
-                    ))}
+                {/* NOTA DE SUPORTE */}
+                <View style={styles.footerNote}>
+                    <Ionicons name="shield-checkmark" size={24} color="#57b947" />
+                    <Text style={styles.footerNoteText}>
+                        Caso encontre anomalias severas não descritas, utilize o menu de Suporte para acionar assistência técnica qualificada.
+                    </Text>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -53,7 +111,7 @@ export default function DuvidasScreen() {
 }
 
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: '#f4f4f4' },
+    screen: { flex: 1, backgroundColor: '#dcdcdc' }, // Ajustado para dar consistência ao fundo cinza do app
     header: {
         height: 120,
         backgroundColor: '#57b947',
@@ -67,31 +125,65 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     logo: { width: 172, height: 56, marginTop: 12 },
-    content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 },
-    backRow: { alignSelf: 'flex-start', paddingVertical: 6 },
+    content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 30 },
+    backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6, marginBottom: 10 },
     backText: { fontSize: 16, color: '#4d4d4d', fontWeight: '600' },
-    title: { textAlign: 'center', fontSize: 24, fontWeight: '700', color: '#4a4a4a', marginBottom: 16 },
-    featureRow: { gap: 12, paddingBottom: 14 },
-    featureCard: {
-        width: 220,
-        borderRadius: 16,
+    title: { fontSize: 32, fontWeight: '700', color: '#474747', marginBottom: 6 },
+    subtitle: { fontSize: 14, color: '#666', marginBottom: 20, lineHeight: 20 },
+    faqList: { gap: 12 },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
         overflow: 'hidden',
-        backgroundColor: '#111',
-        height: 160,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
-    featureCardLarge: { width: 255 },
-    featureImage: { width: '100%', height: '100%', opacity: 0.75 },
-    featureText: {
-        position: 'absolute',
-        left: 14,
-        right: 14,
-        bottom: 14,
-        color: '#fff',
-        fontSize: 17,
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        paddingHorizontal: 18,
+        minHeight: 64,
+    },
+    cardTitle: {
+        fontSize: 18,
         fontWeight: '600',
+        color: '#4a4a4a',
+        flex: 1,
+        paddingRight: 10,
     },
-    sectionTitle: { fontSize: 22, fontWeight: '700', color: '#4a4a4a', marginTop: 8, marginBottom: 14 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
-    gridTile: { width: '48%', height: 88, borderRadius: 12, overflow: 'hidden', backgroundColor: '#e5e5e5' },
-    gridImage: { width: '100%', height: '100%' },
+    cardContent: {
+        backgroundColor: '#f9f9f9',
+        paddingHorizontal: 18,
+        paddingBottom: 18,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    cardText: {
+        fontSize: 15,
+        color: '#5a5a5a',
+        lineHeight: 22,
+        marginTop: 12,
+    },
+    footerNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 12,
+        marginTop: 26,
+        gap: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#57b947'
+    },
+    footerNoteText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#666',
+        lineHeight: 18,
+    }
 });
