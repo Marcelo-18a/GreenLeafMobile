@@ -29,8 +29,23 @@ export default function NotificacoesScreen() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                setNotificacoes(data);
+                const data: Notificacao[] = await response.json();
+                
+                // 🔧 REGRA DE NEGÓCIO DO FRONTIER:
+                // Se o backend enviar uma resposta automática estática de teste, nós mudamos o texto 
+                // para avisar que o chamado está EM ANÁLISE, evitando confundir o produtor rural.
+                const dadosTratados = data.map(notif => {
+                    if (notif.tipo === 'suporte' && notif.mensagem.includes('respondido')) {
+                        return {
+                            ...notif,
+                            titulo: "Suporte Recebido",
+                            mensagem: "Recebemos sua solicitação! Nossa equipe técnica já está analisando o caso e responderá em breve."
+                        };
+                    }
+                    return notif;
+                });
+
+                setNotificacoes(dadosTratados);
             }
         } catch (error) {
             console.error('Erro ao buscar notificações da API:', error);
@@ -45,7 +60,6 @@ export default function NotificacoesScreen() {
 
     // Marcar uma notificação no banco como lida
     const marcarComoLida = async (id: string) => {
-        // Atualiza a interface imediatamente
         setNotificacoes(prev =>
             prev.map(notif => (notif._id === id ? { ...notif, lida: true } : notif))
         );
@@ -103,12 +117,11 @@ export default function NotificacoesScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#57b947" />
-            
-            {/* 🛑 REMOVE COMPLETAMENTE A BARRA PRETA DE CABEÇALHO DUPLICADO DA IMAGE_1B0E63.PNG */}
+            {/* 🎨 SINCRONIZAÇÃO DA BARRA DE STATUS TRANSPARENTE SEM A MARGEM BRANCA */}
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* HEADER COM BOTÃO DE VOLTAR */}
+            {/* HEADER COM BOTÃO DE VOLTAR AJUSTADO PARA PADDING TOP */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={24} color="#ffffff" />
@@ -168,8 +181,18 @@ export default function NotificacoesScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f5f5f5' },
-    header: { height: 120, backgroundColor: '#57b947', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, position: 'relative' },
-    backButton: { position: 'absolute', left: 20, top: 48, width: 40, height: 40, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+    header: { 
+        height: 130, // Aumentado um pouco para acomodar o espaço da barra translúcida
+        backgroundColor: '#57b947', 
+        flexDirection: 'row', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        borderBottomLeftRadius: 24, 
+        borderBottomRightRadius: 24, 
+        position: 'relative',
+        paddingTop: 30 // Adiciona o recuo para os ícones do sistema não atropelarem a logo
+    },
+    backButton: { position: 'absolute', left: 20, top: 62, width: 40, height: 40, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
     logo: { width: 160, height: 50, resizeMode: 'contain', marginTop: 15 },
     content: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
     titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },

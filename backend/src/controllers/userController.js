@@ -104,7 +104,6 @@ const updateMe = async (req, res) => {
     }
 };
 
-// 🛠️ FUNÇÃO ENVIARSUPORTEEMAIL CORRIGIDA: REMOVIDA A CRIAÇÃO PREMATURA DE NOTIFICAÇÃO
 const enviarSuporteEmail = async (req, res) => {
     console.log("=== [SUPORTE DISCORD] Nova requisição recebida no backend ===");
     
@@ -176,23 +175,40 @@ ${pergunta}
     }
 };
 
-// 🌟 ÚNICO LUGAR QUE CRIA A NOTIFICAÇÃO DE RESPOSTA DO SUPORTE NO BANCO
+// 🌟 GATILHO CORRIGIDO: Agora protege contra a varredura automática do robô do Discord
 const triggerNotificationReply = async (req, res) => {
     try {
         const { idProdutor } = req.params;
+        const { confirmar } = req.query; // Captura se o parâmetro ?confirmar=true existe na URL
 
-        await Notification.create({
-            userId: idProdutor,
-            tipo: 'suporte',
-            titulo: '💬 Suporte Respondido!',
-            mensagem: 'A nossa equipe técnica analisou o seu chamado e acabou de enviar as instruções detalhadas de correção para o seu e-mail cadastrado. Confira a sua caixa de entrada!'
-        });
+        // Só cria a notificação no MongoDB se o parâmetro confirmar for explicitamente enviado pelo clique humano
+        if (confirmar === 'true') {
+            await Notification.create({
+                userId: idProdutor,
+                tipo: 'suporte',
+                titulo: '💬 Suporte Respondido!',
+                mensagem: 'A nossa equipe técnica analisou o seu chamado e acabou de enviar as instruções detalhadas de correção para o seu e-mail cadastrado. Confira a sua caixa de entrada!'
+            });
 
+            return res.send(`
+                <div style="font-family: sans-serif; text-align: center; padding: 60px 20px;">
+                    <div style="max-width: 450px; margin: 0 auto; border: 1px solid #e0e0e0; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-color: #f9f9f9;">
+                        <h1 style="color: #57b947; margin-bottom: 10px;">✓ Sucesso Técnico!</h1>
+                        <p style="font-size: 16px; color: #444; line-height: 1.5;">A notificação de atendimento concluído foi injetada com sucesso no celular do produtor rural.</p>
+                    </div>
+                </div>
+            `);
+        }
+
+        // Se for o Discord varrendo o link automaticamente, ele apenas recebe essa interface com o botão, sem criar nada por baixo dos panos
         res.send(`
             <div style="font-family: sans-serif; text-align: center; padding: 60px 20px;">
                 <div style="max-width: 450px; margin: 0 auto; border: 1px solid #e0e0e0; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                    <h1 style="color: #57b947; margin-bottom: 10px;">✓ Sucesso Técnico!</h1>
-                    <p style="font-size: 16px; color: #444; line-height: 1.5;">A notificação de atendimento concluído foi injetada diretamente no celular do produtor rural no banco de dados.</p>
+                    <h2 style="color: #333; margin-bottom: 15px;">Painel de Controle GreenLeaf</h2>
+                    <p style="font-size: 15px; color: #666; margin-bottom: 25px; line-height: 1.5;">Você está prestes a enviar uma notificação de suporte respondido para o aplicativo do produtor.</p>
+                    <a href="?confirmar=true" style="display: inline-block; background-color: #57b947; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                        Confirmar e Enviar Notificação
+                    </a>
                 </div>
             </div>
         `);

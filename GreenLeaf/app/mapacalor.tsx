@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, StatusBar, Dimensions } from 'react-native';
-import MapView, { Heatmap, Region } from 'react-native-maps'; 
+import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,16 +14,14 @@ interface CoordenadaCalor {
 const API_URL = 'https://greenleafmobile.onrender.com/api/diagnosticos';
 
 export default function MapaCalorScreen() {
-    // Separamos os pontos em duas listas para calcular a densidade de cada ambiente de forma independente
     const [pontosInfectados, setPontosInfectados] = useState<CoordenadaCalor[]>([]);
     const [pontosSaudaveis, setPontosSaudaveis] = useState<CoordenadaCalor[]>([]);
     const [loading, setLoading] = useState(true);
-    const [dynamicRadius, setDynamicRadius] = useState(40); 
-    const [regiaoInicial, setRegiaoInicial] = useState({
-        latitude: -24.7125, 
-        longitude: -47.8824,
-        latitudeDelta: 0.04,
-        longitudeDelta: 0.04,
+    
+    // Centralizado por padrão em Pariquera-Açu
+    const [centroMapa, setCentroMapa] = useState({
+        latitude: -24.7125,
+        longitude: -47.8824
     });
 
     useEffect(() => {
@@ -52,7 +50,7 @@ export default function MapaCalorScreen() {
                                 const ponto = {
                                     latitude: Number(item.latitude),
                                     longitude: Number(item.longitude),
-                                    weight: 1 // IMPORTANTE: Peso inicial idêntico (= 1) para todos para calcular por ACUMULAÇÃO
+                                    weight: 1 
                                 };
 
                                 if (ehInfeccao) {
@@ -65,12 +63,10 @@ export default function MapaCalorScreen() {
                         setPontosInfectados(infectados);
                         setPontosSaudaveis(saudaveis);
 
-                        if (dados.length > 0) {
-                            setRegiaoInicial({
+                        if (dados.length > 0 && dados[0].latitude && dados[0].longitude) {
+                            setCentroMapa({
                                 latitude: Number(dados[0].latitude),
-                                longitude: Number(dados[0].longitude),
-                                latitudeDelta: 0.02,
-                                longitudeDelta: 0.02,
+                                longitude: Number(dados[0].longitude)
                             });
                         }
                     }
@@ -85,32 +81,117 @@ export default function MapaCalorScreen() {
         buscarPontosMapa();
     }, []);
 
-    // CONTROLE DE RAIO ADAPTATIVO CONFORME O ZOOM
-    const handleRegionChangeComplete = (region: Region) => {
-        const delta = region.latitudeDelta;
-        let newRadius = 40;
-        
-        if (delta < 0.005) {
-            newRadius = 70; 
-        } else if (delta < 0.02) {
-            newRadius = 45; 
-        } else if (delta < 0.09) {
-            newRadius = 25; 
-        } else {
-            newRadius = 12; 
-        }
-        
-        setDynamicRadius(newRadius);
+    const gerarHTMLMapa = () => {
+        const arrayInfectados = pontosInfectados.map(p => [p.latitude, p.longitude, p.weight]);
+        const arraySaudaveis = pontosSaudaveis.map(p => [p.latitude, p.longitude, p.weight]);
+
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+                <style>
+                    body, html, #map { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #f5f5f5; }
+                    .leaflet-container { background: #f5f5f5 !important; }
+                    
+                    /* CORREÇÃO DO BUG: Aplica uma transição suave na renderização da camada de calor */
+                    .leaflet-heatmap-layer {
+                        transition: transform 0.2s ease-out;
+                        will-change: transform;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="map"></div>
+                <script>
+                    // Inicialização com animações nativas forçadas como true
+                    var map = L.map('map', { 
+                        zoomControl: false,
+                        maxZoom: 18,
+                        minZoom: 3,
+                        zoomAnimation: true,
+                        fadeAnimation: true
+                    }).setView([${centroMapa.latitude}, ${centroMapa.longitude}], 14);
+                    
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        subdomains: 'abcd',
+                        maxZoom: 20
+                    }).addTo(map);
+
+                    var dadosInfectados = ${JSON.stringify(arrayInfectados)};
+                    var dadosSaudaveis = ${JSON.stringify(arraySaudaveis)};
+
+                    var camadaInfectados, camadaSaudaveis;
+
+                    // Criação inicial das camadas com o cálculo automático baseado no raio
+                    function inicializarCamadas(raio) {
+                        if (dadosInfectados.length > 0) {
+                            camadaInfectados = L.heatLayer(dadosInfectados, {
+                                radius: raio,
+                                blur: Math.round(raio * 0.57),
+                                maxZoom: 18,
+                                minOpacity: 0.45,
+                                gradient: { 0.2: '#ffeb3b', 0.6: '#ff9800', 1.0: '#d9534f' }
+                            }).addTo(map);
+                        }
+
+                        if (dadosSaudaveis.length > 0) {
+                            camadaSaudaveis = L.heatLayer(dadosSaudaveis, {
+                                radius: raio,
+                                blur: Math.round(raio * 0.57),
+                                maxZoom: 18,
+                                minOpacity: 0.4,
+                                gradient: { 0.2: '#a7ffeb', 0.6: '#4fbe37', 1.0: '#1b5e20' }
+                            }).addTo(map);
+                        }
+                    }
+
+                    // Inicializa com o raio base 28
+                    inicializarCamadas(28);
+
+                    // CORREÇÃO DO BUG: Escuta os eventos dinâmicos (move e viewreset) para redesenhar sem trancos
+                    function atualizarRaioDinamico() {
+                        var zoomAtual = map.getZoom();
+                        var novoRaio = 28;
+
+                        if (zoomAtual >= 16) {
+                            novoRaio = 48;
+                        } else if (zoomAtual >= 14) {
+                            novoRaio = 28;
+                        } else if (zoomAtual >= 12) {
+                            novoRaio = 18;
+                        } else {
+                            novoRaio = 10;
+                        }
+
+                        var novoBlur = Math.round(novoRaio * 0.57);
+
+                        if (camadaInfectados) {
+                            camadaInfectados.setOptions({ radius: novoRaio, blur: novoBlur });
+                        }
+                        if (camadaSaudaveis) {
+                            camadaSaudaveis.setOptions({ radius: novoRaio, blur: novoBlur });
+                        }
+                    }
+
+                    // Vincula os gatilhos para atualizar de forma contínua durante o gesto de pinça (zoom)
+                    map.on('zoomlevelschange viewreset move', atualizarRaioDinamico);
+                </script>
+            </body>
+            </html>
+        `;
     };
 
-    // Verifica se existe algum ponto em qualquer uma das listas
     const temPontos = pontosInfectados.length > 0 || pontosSaudaveis.length > 0;
 
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-            {/* BOTÃO FLUTUANTE DE VOLTAR */}
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
                 <Ionicons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
@@ -126,49 +207,24 @@ export default function MapaCalorScreen() {
                     <Text style={styles.emptyText}>Nenhum dado geográfico coletado para renderizar o mapa.</Text>
                 </View>
             ) : (
-                <MapView
-                    style={styles.map}
-                    initialRegion={regiaoInicial}
-                    onRegionChangeComplete={handleRegionChangeComplete}
-                >
-                    {/* HEATMAP 1: AMBIENTE DE INFECÇÃO (Focos acumulados ficam vermelhos intensos) */}
-                    {pontosInfectados.length > 0 && (
-                        <Heatmap
-                            points={pontosInfectados}
-                            radius={dynamicRadius}
-                            opacity={0.8}
-                            gradient={{
-                                // Transiciona de um tom amarelo/laranja suave (pouco infectado) para Vermelho Vivo (muito infectado junto)
-                                colors: ['#ffeb3b', '#ff9800', '#ff0000'], 
-                                startPoints: [0.1, 0.4, 0.8], 
-                                colorMapSize: 256,
-                            }}
-                        />
-                    )}
-
-                    {/* HEATMAP 2: AMBIENTE SAUDÁVEL (Zonas limpas acumuladas ganham força no Verde) */}
-                    {pontosSaudaveis.length > 0 && (
-                        <Heatmap
-                            points={pontosSaudaveis}
-                            radius={dynamicRadius}
-                            opacity={0.75}
-                            gradient={{
-                                // Transiciona de um tom verde-água bem clarinho para um Verde escuro encorpado
-                                colors: ['#b9f6ca', '#00ff00', '#004d40'], 
-                                startPoints: [0.1, 0.5, 0.9], 
-                                colorMapSize: 256,
-                            }}
-                        />
-                    )}
-                </MapView>
+                <View style={styles.mapContainer}>
+                    <WebView
+                        originWhitelist={['*']}
+                        source={{ html: gerarHTMLMapa() }}
+                        style={styles.map}
+                        javaScriptEnabled={true}
+                        domStorageEnabled={true}
+                    />
+                </View>
             )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f5f5' },
-    map: { width: Dimensions.get('window').width, height: Dimensions.get('window').height },
+    container: { flex: 1, backgroundColor: '#f5f5f5' }, 
+    mapContainer: { flex: 1, width: Dimensions.get('window').width, height: Dimensions.get('window').height },
+    map: { flex: 1 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
     backButton: {
         position: 'absolute',

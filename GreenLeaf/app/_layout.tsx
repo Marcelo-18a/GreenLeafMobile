@@ -6,6 +6,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+// IMPORTANTE: Adicione o StatusBar no topo junto aos outros imports do react-native se houver, 
+// ou pode colocar direto aqui para não esquecer:
+import { StatusBar } from 'react-native'; 
+
 import { useColorScheme } from '@/components/useColorScheme';
 
 export {
@@ -41,11 +45,20 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
+// COLE AQUI A FUNÇÃO ATUALIZADA:
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      
+      {/* CORREÇÃO GLOBAL: Força o app a ocupar toda a tela nativa, eliminando a barra branca */}
+      <StatusBar 
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} 
+        backgroundColor="transparent" 
+        translucent={true} 
+      />
+
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="cadastro" options={{ headerShown: false }} />
